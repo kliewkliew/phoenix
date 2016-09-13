@@ -434,7 +434,7 @@ public class MetaDataClient {
 
     /**
      * Update the cache with the latest as of the connection scn.
-     * @param functioNames
+     * @param functionNames
      * @return the timestamp from the server, negative if the function was added to the cache and positive otherwise
      * @throws SQLException
      */

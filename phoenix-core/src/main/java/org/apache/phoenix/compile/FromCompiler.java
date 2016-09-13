@@ -674,7 +674,7 @@ public class FromCompiler {
                     }
                     allcolumns.add(new PColumnImpl(name, familyName, dynColumn.getDataType(), dynColumn.getMaxLength(),
                             dynColumn.getScale(), dynColumn.isNull(), position, dynColumn.getSortOrder(), dynColumn.getArraySize(),
-                            null, false, dynColumn.getDefaultExpression(), dynColumn.getExpression(), false, true));
+                            null, false, null, dynColumn.getExpression(), false, true));
                     position++;
                 }
                 theTable = PTableImpl.makePTable(theTable, allcolumns);

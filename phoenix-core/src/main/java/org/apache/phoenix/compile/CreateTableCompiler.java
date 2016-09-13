@@ -98,13 +98,14 @@ public class CreateTableCompiler {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.UNALLOWED_COLUMN_FAMILY)
                 .build().buildException();
             }
-            if (columnDef.getDefaultExpression() != null) {
+            if (columnDef.getDefaultExpressionNode() != null) {
                 ExpressionCompiler compiler = new ExpressionCompiler(context);
-                Expression defaultExpression = columnDef.getDefaultExpression().accept(compiler);
+                Expression defaultExpression = columnDef.getDefaultExpressionNode().accept(compiler);
                 if (!defaultExpression.isStateless() && defaultExpression.getDeterminism() != Determinism.ALWAYS) {
                     throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
                             .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
                 }
+                columnDef.setDefaultExpression(defaultExpression);
             }
         }
 

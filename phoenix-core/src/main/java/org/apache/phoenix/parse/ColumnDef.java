@@ -21,6 +21,7 @@ import java.sql.SQLException;
 
 import org.apache.phoenix.exception.SQLExceptionCode;
 import org.apache.phoenix.exception.SQLExceptionInfo;
+import org.apache.phoenix.expression.Expression;
 import org.apache.phoenix.schema.SortOrder;
 import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.schema.types.PDecimal;
@@ -47,12 +48,13 @@ public class ColumnDef {
     private final SortOrder sortOrder;
     private final boolean isArray;
     private final Integer arrSize;
-    private final ParseNode defaultExpression;
+    private Expression defaultExpression;
+    private final ParseNode defaultExpressionNode;
     private final String expressionStr;
     private final boolean isRowTimestamp;
 
     ColumnDef(ColumnName columnDefName, String sqlTypeName, boolean isArray, Integer arrSize, Boolean isNull, Integer maxLength,
-              Integer scale, boolean isPK, SortOrder sortOrder, ParseNode defaultExpression, String expressionStr, boolean isRowTimestamp) {
+              Integer scale, boolean isPK, SortOrder sortOrder, ParseNode defaultExpressionNode, String expressionStr, boolean isRowTimestamp) {
         try {
             Preconditions.checkNotNull(sortOrder);
             PDataType baseType;
@@ -120,7 +122,7 @@ public class ColumnDef {
                     }
                 }
             }
-            if (defaultExpression != null && !defaultExpression.isStateless()) {
+            if (defaultExpressionNode != null && !defaultExpressionNode.isStateless()) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
                         .setColumnName(columnDefName.getColumnName()).build().buildException();
             }
@@ -129,7 +131,8 @@ public class ColumnDef {
             this.isPK = isPK;
             this.sortOrder = sortOrder;
             this.dataType = dataType;
-            this.defaultExpression = defaultExpression;
+            this.defaultExpression = null;
+            this.defaultExpressionNode = defaultExpressionNode;
             this.expressionStr = expressionStr;
             this.isRowTimestamp = isRowTimestamp;
         } catch (SQLException e) {
@@ -184,7 +187,9 @@ public class ColumnDef {
         return arrSize;
     }
 
-    public ParseNode getDefaultExpression() { return defaultExpression; }
+    public Expression getDefaultExpression() { return defaultExpression; }
+
+    public ParseNode getDefaultExpressionNode() { return defaultExpressionNode; }
 
     public String getExpression() {
         return expressionStr;
@@ -192,6 +197,10 @@ public class ColumnDef {
 
     public boolean isRowTimestamp() {
         return isRowTimestamp;
+    }
+
+    public void setDefaultExpression(Expression defaultExpression) {
+        this.defaultExpression = defaultExpression;
     }
     
     public void setIsPK(boolean isPK) {
