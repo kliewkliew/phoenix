@@ -681,6 +681,11 @@ public class TestUtil {
                 }
 
                 @Override
+                public Expression getDefaultExpression() {
+                    return null;
+                }
+                
+                @Override
                 public String getExpressionStr() {
                     return null;
                 }

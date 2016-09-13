@@ -18,7 +18,8 @@
 package org.apache.phoenix.schema;
 
 
-import org.apache.phoenix.parse.ParseNode;
+import org.apache.phoenix.expression.Expression;
+import org.apache.phoenix.jdbc.PhoenixConnection;
 
 /**
  * Definition of a Phoenix column
@@ -53,6 +54,8 @@ public interface PColumn extends PDatum {
     boolean isViewReferenced();
     
     int getEstimatedSize();
+
+    Expression getDefaultExpression();
 
     String getExpressionStr();
     
