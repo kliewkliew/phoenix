@@ -17,7 +17,6 @@
  */
 package org.apache.phoenix.schema;
 
-import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.util.SizedUtil;
 
 public class DelegateColumn extends DelegateDatum implements PColumn {
@@ -70,7 +69,7 @@ public class DelegateColumn extends DelegateDatum implements PColumn {
     public boolean isViewReferenced() {
         return getDelegate().isViewReferenced();
     }
-    
+
     @Override
     public String getExpressionStr() {
         return getDelegate().getExpressionStr();
@@ -90,9 +89,4 @@ public class DelegateColumn extends DelegateDatum implements PColumn {
 	public boolean isDynamic() {
 		return getDelegate().isDynamic();
 	}
-
-    @Override
-    public LiteralParseNode getDefaultVal() {
-        return getDelegate().getDefaultVal();
-    }
 }

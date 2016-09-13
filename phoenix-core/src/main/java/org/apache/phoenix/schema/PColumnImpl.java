@@ -19,7 +19,6 @@ package org.apache.phoenix.schema;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.phoenix.coprocessor.generated.PTableProtos;
-import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.query.QueryConstants;
 import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.util.SizedUtil;
@@ -32,7 +31,6 @@ public class PColumnImpl implements PColumn {
     private PDataType dataType;
     private Integer maxLength;
     private Integer scale;
-    private LiteralParseNode defaultVal;
     private boolean nullable;
     private int position;
     private SortOrder sortOrder;
@@ -54,19 +52,7 @@ public class PColumnImpl implements PColumn {
                        boolean nullable,
                        int position,
                        SortOrder sortOrder, Integer arrSize, byte[] viewConstant, boolean isViewReferenced, String expressionStr, boolean isRowTimestamp, boolean isDynamic) {
-        this(name, familyName, dataType, maxLength, scale, null, nullable, position, sortOrder, arrSize, viewConstant, isViewReferenced, expressionStr, isRowTimestamp, isDynamic);
-    }
-
-    public PColumnImpl(PName name,
-                       PName familyName,
-                       PDataType dataType,
-                       Integer maxLength,
-                       Integer scale,
-                       LiteralParseNode defaultVal,
-                       boolean nullable,
-                       int position,
-                       SortOrder sortOrder, Integer arrSize, byte[] viewConstant, boolean isViewReferenced, String expressionStr, boolean isRowTimestamp, boolean isDynamic) {
-        init(name, familyName, dataType, maxLength, scale, defaultVal, nullable, position, sortOrder, arrSize, viewConstant, isViewReferenced, expressionStr, isRowTimestamp, isDynamic);
+        init(name, familyName, dataType, maxLength, scale, nullable, position, sortOrder, arrSize, viewConstant, isViewReferenced, expressionStr, isRowTimestamp, isDynamic);
     }
 
     public PColumnImpl(PColumn column, int position) {
@@ -79,7 +65,6 @@ public class PColumnImpl implements PColumn {
             PDataType dataType,
             Integer maxLength,
             Integer scale,
-            LiteralParseNode defaultVal,
             boolean nullable,
             int position,
             SortOrder sortOrder,
@@ -101,7 +86,6 @@ public class PColumnImpl implements PColumn {
         this.maxLength = maxLength;
         this.scale = scale;
         this.nullable = nullable;
-        this.defaultVal = defaultVal;
         this.position = position;
         this.sortOrder = sortOrder;
         this.arraySize = arrSize;
@@ -142,11 +126,6 @@ public class PColumnImpl implements PColumn {
     @Override
     public Integer getScale() {
         return scale;
-    }
-
-    @Override
-    public LiteralParseNode getDefaultVal() {
-        return defaultVal;
     }
     
     @Override
