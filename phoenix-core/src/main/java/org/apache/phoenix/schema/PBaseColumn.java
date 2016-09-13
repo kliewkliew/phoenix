@@ -17,7 +17,6 @@
  */
 package org.apache.phoenix.schema;
 
-import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.util.SizedUtil;
 
 
@@ -38,11 +37,6 @@ public abstract class PBaseColumn implements PColumn {
 
     @Override
     public final Integer getScale() {
-        return null;
-    }
-
-    @Override
-    public LiteralParseNode getDefaultVal() {
         return null;
     }
 

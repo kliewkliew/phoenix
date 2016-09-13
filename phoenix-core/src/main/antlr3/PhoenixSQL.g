@@ -639,9 +639,10 @@ column_def returns [ColumnDef ret]
         { $ret = factory.columnDef(c, dt, ar != null || lsq != null, a == null ? null :  Integer.parseInt( a.getText() ), nn!=null ? Boolean.FALSE : n!=null ? Boolean.TRUE : null, 
             l == null ? null : Integer.parseInt( l.getText() ),
             s == null ? null : Integer.parseInt( s.getText() ),
-            df == null ? null : (LiteralParseNode)df,
             pk != null, 
             order == null ? SortOrder.getDefault() : SortOrder.fromDDLValue(order.getText()),
+            (ParseNode) df,
+            df == null ? null : df.toString(),
             rr != null); }
     ;
 

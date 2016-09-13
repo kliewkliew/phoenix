@@ -43,16 +43,16 @@ public class ColumnDef {
     private final Boolean isNull;
     private final Integer maxLength;
     private final Integer scale;
-    private final LiteralParseNode defaultVal;
     private boolean isPK;
     private final SortOrder sortOrder;
     private final boolean isArray;
     private final Integer arrSize;
+    private final ParseNode defaultExpression;
     private final String expressionStr;
     private final boolean isRowTimestamp;
 
     ColumnDef(ColumnName columnDefName, String sqlTypeName, boolean isArray, Integer arrSize, Boolean isNull, Integer maxLength,
-            Integer scale, LiteralParseNode defaultVal, boolean isPK, SortOrder sortOrder, String expressionStr, boolean isRowTimestamp) {
+              Integer scale, boolean isPK, SortOrder sortOrder, ParseNode defaultExpression, String expressionStr, boolean isRowTimestamp) {
         try {
             Preconditions.checkNotNull(sortOrder);
             PDataType baseType;
@@ -120,12 +120,16 @@ public class ColumnDef {
                     }
                 }
             }
+            if (defaultExpression != null && !defaultExpression.isStateless()) {
+                throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
+                        .setColumnName(columnDefName.getColumnName()).build().buildException();
+            }
             this.maxLength = maxLength;
             this.scale = scale;
-            this.defaultVal = defaultVal;
             this.isPK = isPK;
             this.sortOrder = sortOrder;
             this.dataType = dataType;
+            this.defaultExpression = defaultExpression;
             this.expressionStr = expressionStr;
             this.isRowTimestamp = isRowTimestamp;
         } catch (SQLException e) {
@@ -135,7 +139,7 @@ public class ColumnDef {
 
     ColumnDef(ColumnName columnDefName, String sqlTypeName, Boolean isNull, Integer maxLength,
             Integer scale, boolean isPK, SortOrder sortOrder, String expressionStr, boolean isRowTimestamp) {
-        this(columnDefName, sqlTypeName, false, 0, isNull, maxLength, scale, null, isPK, sortOrder, expressionStr, isRowTimestamp);
+        this(columnDefName, sqlTypeName, false, 0, isNull, maxLength, scale, isPK, sortOrder, null, expressionStr, isRowTimestamp);
     }
 
     public ColumnName getColumnDefName() {
@@ -164,10 +168,6 @@ public class ColumnDef {
         return scale;
     }
 
-    public LiteralParseNode getDefaultValue() {
-        return defaultVal;
-    }
-
     public boolean isPK() {
         return isPK;
     }
@@ -183,6 +183,8 @@ public class ColumnDef {
     public Integer getArraySize() {
         return arrSize;
     }
+
+    public ParseNode getDefaultExpression() { return defaultExpression; }
 
     public String getExpression() {
         return expressionStr;

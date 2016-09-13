@@ -544,12 +544,12 @@ public class UpsertCompiler {
                     // Tail the columns with default values
                     List<Integer> explicitColumnsToBe = Arrays.asList(ArrayUtils.toObject(columnIndexesToBe)).subList(0, nValuesToSet-1);
                     for (PColumn column: allColumnsToBe) {
-                        if (!explicitColumnsToBe.contains(column.getPosition()) && null != column.getDefaultVal()) {
+                        if (!explicitColumnsToBe.contains(column.getPosition()) && null != column.getDefaultExpressionNode()) {
                             nColumnsToSet++;
                             nValuesToSet++;
                             columnIndexesToBe[nValuesToSet-1] = column.getPosition();
                             pkSlotIndexesToBe[nValuesToSet-1] = table.getPKColumns().indexOf(column);
-                            valueNodes.add(column.getDefaultVal());
+                            valueNodes.add(column.getDefaultExpressionNode());
                         }
                     }
                     columnIndexesToBe = Arrays.copyOf(columnIndexesToBe, nValuesToSet);
