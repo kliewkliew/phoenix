@@ -41,10 +41,12 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.phoenix.coprocessor.generated.PTableProtos;
 import org.apache.phoenix.exception.DataExceedsCapacityException;
+import org.apache.phoenix.expression.LiteralExpression;
 import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.index.IndexMaintainer;
 import org.apache.phoenix.jdbc.PhoenixConnection;
+import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.protobuf.ProtobufUtil;
 import org.apache.phoenix.query.QueryConstants;
 import org.apache.phoenix.schema.RowKeySchema.RowKeySchemaBuilder;
@@ -54,11 +56,7 @@ import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.schema.types.PDouble;
 import org.apache.phoenix.schema.types.PFloat;
 import org.apache.phoenix.schema.types.PVarchar;
-import org.apache.phoenix.util.ByteUtil;
-import org.apache.phoenix.util.SchemaUtil;
-import org.apache.phoenix.util.SizedUtil;
-import org.apache.phoenix.util.StringUtil;
-import org.apache.phoenix.util.TrustedByteArrayOutputStream;
+import org.apache.phoenix.util.*;
 import org.apache.tephra.TxConstants;
 
 import com.google.common.base.Objects;
@@ -602,7 +600,19 @@ public class PTableImpl implements PTable {
                 // This will throw if the value is null and the type doesn't allow null
                 byte[] byteValue = values[i++];
                 if (byteValue == null) {
-                    byteValue = ByteUtil.EMPTY_BYTE_ARRAY;
+                    if (column.getExpressionStr() != null) {
+                        try {
+                            LiteralExpression defaultLiteral = ExpressionUtil.getConstantExpression(column.getDefaultExpression(), key);
+                            ImmutableBytesWritable valuePtr = new ImmutableBytesWritable();
+                            defaultLiteral.evaluate(null, valuePtr);
+                            byteValue = valuePtr.copyBytes();
+                        } catch (SQLException e) {
+                            //TODO
+                        }
+                    }
+                    else {
+                        byteValue = ByteUtil.EMPTY_BYTE_ARRAY;
+                    }
                 }
                 wasNull = byteValue.length == 0;
                 // An empty byte array return value means null. Do this,
