@@ -498,8 +498,14 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
 
     @Test
     public void testCreateTableDefaultColumnValue() throws Exception {
-        String ddl = "CREATE TABLE T_DEFAULT (pk INTEGER PRIMARY KEY, test1 INTEGER, test2 INTEGER DEFAULT 5)";
-        String dml = "UPSERT INTO T_DEFAULT VALUES (0)";
+        String ddl = "CREATE TABLE T_DEFAULT (" +
+                "pk1 INTEGER NOT NULL, " +
+                "pk2 INTEGER NOT NULL, " +
+                "pk3 INTEGER NOT NULL DEFAULT 10, " +
+                "test1 INTEGER, " +
+                "test2 INTEGER DEFAULT 5, " +
+                "CONSTRAINT NAME_PK PRIMARY KEY (pk1, pk2, pk3))";
+        String dml = "UPSERT INTO T_DEFAULT VALUES (1, 2)";
 
         long ts = nextTimestamp();
         Properties props = new Properties();
@@ -513,9 +519,11 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
         conn = DriverManager.getConnection(getUrl(), props);
         ResultSet rs = conn.createStatement().executeQuery("SELECT * from T_DEFAULT");
         assertTrue(rs.next());
-        assertEquals(0, rs.getInt(1));
-        assertEquals(0, rs.getInt(2));
-        assertEquals(5, rs.getInt(3));
+        assertEquals(1, rs.getInt(1));
+        assertEquals(2, rs.getInt(2));
+        assertEquals(10, rs.getInt(3));
+        assertEquals(0, rs.getInt(4));
+        assertEquals(5, rs.getInt(5));
         assertFalse(rs.next());
     }
 }

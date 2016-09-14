@@ -571,9 +571,13 @@ public class PTableImpl implements PTable {
 
     @Override
     public int newKey(ImmutableBytesWritable key, byte[][] values) {
+        List<PColumn> columns = getPKColumns();
         int nValues = values.length;
-        while (nValues > 0 && (values[nValues-1] == null || values[nValues-1].length == 0)) {
-            nValues--;
+        for (int pkColNum = 0; pkColNum < values.length; pkColNum++) {
+            if ((values[nValues-1] == null || values[nValues-1].length == 0) &&
+                    (null == columns.get(nValues-1).getExpressionStr() || columns.get(nValues-1).getExpressionStr().isEmpty())) {
+                nValues--;
+            }
         }
         int i = 0;
         TrustedByteArrayOutputStream os = new TrustedByteArrayOutputStream(SchemaUtil.estimateKeyLength(this));
@@ -584,7 +588,6 @@ public class PTableImpl implements PTable {
                 i++;
                 os.write(QueryConstants.SEPARATOR_BYTE_ARRAY);
             }
-            List<PColumn> columns = getPKColumns();
             int nColumns = columns.size();
             PDataType type = null;
             SortOrder sortOrder = null;
