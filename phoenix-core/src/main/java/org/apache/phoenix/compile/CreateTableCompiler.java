@@ -62,6 +62,7 @@ import org.apache.phoenix.schema.TableRef;
 import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.schema.types.PVarbinary;
 import org.apache.phoenix.util.ByteUtil;
+import org.apache.phoenix.util.ExpressionUtil;
 import org.apache.phoenix.util.QueryUtil;
 
 import com.google.common.collect.Iterators;
@@ -101,7 +102,7 @@ public class CreateTableCompiler {
             if (columnDef.getDefaultExpressionNode() != null) {
                 ExpressionCompiler compiler = new ExpressionCompiler(context);
                 Expression defaultExpression = columnDef.getDefaultExpressionNode().accept(compiler);
-                if (!defaultExpression.isStateless() && defaultExpression.getDeterminism() != Determinism.ALWAYS) {
+                if (!ExpressionUtil.isConstant(defaultExpression)) {
                     throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
                             .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
                 }
