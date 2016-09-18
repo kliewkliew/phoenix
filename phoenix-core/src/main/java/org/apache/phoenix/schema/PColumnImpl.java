@@ -57,23 +57,6 @@ public class PColumnImpl implements PColumn {
                        Integer arrSize,
                        byte[] viewConstant,
                        boolean isViewReferenced,
-                       String expressionStr,
-                       boolean isRowTimestamp,
-                       boolean isDynamic) {
-        init(name, familyName, dataType, maxLength, scale, nullable, position, sortOrder, arrSize, viewConstant, isViewReferenced, null, expressionStr, isRowTimestamp, isDynamic);
-    }
-
-    public PColumnImpl(PName name,
-                       PName familyName,
-                       PDataType dataType,
-                       Integer maxLength,
-                       Integer scale,
-                       boolean nullable,
-                       int position,
-                       SortOrder sortOrder,
-                       Integer arrSize,
-                       byte[] viewConstant,
-                       boolean isViewReferenced,
                        Expression defaultExpression,
                        String expressionStr,
                        boolean isRowTimestamp,
