@@ -505,6 +505,7 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
                 "pk3 INTEGER NOT NULL DEFAULT 10, " +
                 "test1 INTEGER, " +
                 "test2 INTEGER DEFAULT 5, " +
+                "test3 INTEGER, " +
                 "CONSTRAINT NAME_PK PRIMARY KEY (pk1, pk2, pk3))";
 
         long ts = nextTimestamp();
@@ -524,7 +525,8 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
 
         List<String> projections = Arrays.asList(
                 "*",
-                "pk1, pk2, pk3, test1, test2"
+                "pk1, pk2, pk3, test1, test2",
+                "pk1, pk2, pk3, test1, test2, test3"
         );
 
         for (String projection: projections) {
