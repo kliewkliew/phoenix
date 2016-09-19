@@ -192,7 +192,7 @@ public class KeyValueSchema extends ValueSchema {
             value="NP_BOOLEAN_RETURN_NULL", 
             justification="Designed to return null.")
     public Boolean next(ImmutableBytesWritable ptr, int position, int maxOffset, ValueBitSet valueSet) {
-        if (ptr.getOffset() + ptr.getLength() >= maxOffset) {
+        if (ptr.getOffset() + ptr.getLength() > maxOffset) {
             ptr.set(ptr.get(), maxOffset, 0);
             return null;
         }

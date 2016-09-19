@@ -18,16 +18,10 @@
 package org.apache.phoenix.end2end;
 
 import static org.apache.hadoop.hbase.HColumnDescriptor.DEFAULT_REPLICATION_SCOPE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -500,6 +494,62 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
             conn.createStatement().execute(createTableDDL);
         } catch (SchemaNotFoundException e) {
             fail();
+        }
+    }
+
+    @Test
+    public void testCreateTableDefaultColumnValue() throws Exception {
+        String ddl = "CREATE TABLE T_DEFAULT (" +
+                "pk1 INTEGER NOT NULL, " +
+                "pk2 INTEGER NOT NULL, " +
+                "pk3 INTEGER NOT NULL DEFAULT 10, " +
+                "test1 INTEGER, " +
+                "test2 INTEGER DEFAULT 5, " +
+                "test3 INTEGER, " +
+                "CONSTRAINT NAME_PK PRIMARY KEY (pk1, pk2, pk3))";
+
+        long ts = nextTimestamp();
+        Properties props = new Properties();
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
+        Connection conn = DriverManager.getConnection(getUrl(), props);
+        conn.createStatement().execute(ddl);
+
+        String dml = "UPSERT INTO T_DEFAULT VALUES (1, 2)";
+        conn.createStatement().execute(dml);
+        dml = "UPSERT INTO T_DEFAULT VALUES (11, 12, 13, 14, null)";
+        conn.createStatement().execute(dml);
+        conn.commit();
+
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
+        conn = DriverManager.getConnection(getUrl(), props);
+
+        List<String> projections = Arrays.asList(
+                "*",
+                "pk1, pk2, pk3, test1, test2",
+                "pk1, pk2, pk3, test1, test2, test3"
+        );
+
+        for (String projection: projections) {
+            ResultSet rs = conn.createStatement().executeQuery("SELECT " + projection + " FROM T_DEFAULT WHERE pk1 = 1");
+            assertTrue(rs.next());
+            assertEquals(1, rs.getInt(1));
+            assertEquals(2, rs.getInt(2));
+            assertEquals(10, rs.getInt(3));
+            assertEquals(0, rs.getInt(4));
+            assertEquals(5, rs.getInt(5));
+            assertEquals(0, rs.getInt(6));
+            assertFalse(rs.next());
+
+            rs = conn.createStatement().executeQuery("SELECT " + projection + " FROM T_DEFAULT WHERE pk1 = 11");
+            assertTrue(rs.next());
+            assertEquals(11, rs.getInt(1));
+            assertEquals(12, rs.getInt(2));
+            assertEquals(13, rs.getInt(3));
+            assertEquals(14, rs.getInt(4));
+            assertEquals(0, rs.getInt(5));
+            assertTrue(rs.wasNull());
+            assertEquals(0, rs.getInt(6));
+            assertFalse(rs.next());
         }
     }
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.phoenix.schema;
 
+import org.apache.phoenix.expression.Expression;
+import org.apache.phoenix.jdbc.PhoenixConnection;
 import org.apache.phoenix.util.SizedUtil;
 
 public class DelegateColumn extends DelegateDatum implements PColumn {
@@ -69,11 +71,12 @@ public class DelegateColumn extends DelegateDatum implements PColumn {
     public boolean isViewReferenced() {
         return getDelegate().isViewReferenced();
     }
-    
+
     @Override
-    public String getExpressionStr() {
-        return getDelegate().getExpressionStr();
-    }
+    public Expression getDefaultExpression() { return getDelegate().getDefaultExpression(); }
+
+    @Override
+    public String getExpressionStr() { return getDelegate().getExpressionStr(); }
 
     @Override
     public boolean isRowTimestamp() {

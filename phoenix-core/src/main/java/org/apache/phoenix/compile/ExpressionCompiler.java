@@ -69,6 +69,7 @@ import org.apache.phoenix.expression.TimestampSubtractExpression;
 import org.apache.phoenix.expression.function.ArrayAllComparisonExpression;
 import org.apache.phoenix.expression.function.ArrayAnyComparisonExpression;
 import org.apache.phoenix.expression.function.ArrayElemRefExpression;
+import org.apache.phoenix.expression.function.DefaultValueExpression;
 import org.apache.phoenix.expression.function.RoundDecimalExpression;
 import org.apache.phoenix.expression.function.RoundTimestampExpression;
 import org.apache.phoenix.parse.AddParseNode;
@@ -415,6 +416,9 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
             addColumn(column);
         }
         Expression expression = ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
+        if (column.getDefaultExpression() != null) {
+            expression = new DefaultValueExpression(Arrays.asList(expression, column.getDefaultExpression()));
+        }
         Expression wrappedExpression = wrapGroupByExpression(expression);
         // If we're in an aggregate expression
         // and we're not in the context of an aggregate function

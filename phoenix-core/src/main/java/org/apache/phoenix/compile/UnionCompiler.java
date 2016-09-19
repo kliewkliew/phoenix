@@ -87,7 +87,7 @@ public class UnionCompiler {
             PColumnImpl projectedColumn = new PColumnImpl(PNameFactory.newName(name),
                 UNION_FAMILY_NAME, targetTypes.get(i).getType(), targetTypes.get(i).getMaxLength(),
                 targetTypes.get(i).getScale(), colProj.getExpression().isNullable(), i,
-                targetTypes.get(i).getSortOrder(), 500, null, false,
+                targetTypes.get(i).getSortOrder(), 500, null, false, null,
                 colProj.getExpression().toString(), false, false);
             projectedColumns.add(projectedColumn);
         }

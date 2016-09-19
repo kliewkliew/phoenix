@@ -90,6 +90,7 @@ import org.apache.phoenix.jdbc.PhoenixDatabaseMetaData;
 import org.apache.phoenix.jdbc.PhoenixPreparedStatement;
 import org.apache.phoenix.jdbc.PhoenixStatement;
 import org.apache.phoenix.parse.LikeParseNode.LikeType;
+import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.query.KeyRange;
 import org.apache.phoenix.query.QueryConstants;
 import org.apache.phoenix.query.QueryServices;
@@ -677,6 +678,11 @@ public class TestUtil {
                 @Override
                 public boolean isViewReferenced() {
                     return false;
+                }
+
+                @Override
+                public Expression getDefaultExpression() {
+                    return null;
                 }
                 
                 @Override
