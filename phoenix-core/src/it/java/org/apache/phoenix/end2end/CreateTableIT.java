@@ -537,6 +537,7 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
             assertEquals(10, rs.getInt(3));
             assertEquals(0, rs.getInt(4));
             assertEquals(5, rs.getInt(5));
+            assertEquals(0, rs.getInt(6));
             assertFalse(rs.next());
 
             rs = conn.createStatement().executeQuery("SELECT " + projection + " FROM T_DEFAULT WHERE pk1 = 11");
@@ -547,6 +548,7 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
             assertEquals(14, rs.getInt(4));
             assertEquals(0, rs.getInt(5));
             assertTrue(rs.wasNull());
+            assertEquals(0, rs.getInt(6));
             assertFalse(rs.next());
         }
     }
