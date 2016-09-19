@@ -92,7 +92,6 @@ public class CreateTableCompiler {
         String viewStatementToBe = null;
         byte[][] viewColumnConstantsToBe = null;
         BitSet isViewColumnReferencedToBe = null;
-        boolean hasDefaultValuesToBe = false;
         // Check whether column families having local index column family suffix or not if present
         // don't allow creating table.
         for (ColumnDef columnDef: create.getColumnDefs()) {
@@ -108,11 +107,8 @@ public class CreateTableCompiler {
                             .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
                 }
                 columnDef.setDefaultExpression(defaultExpression);
-
-                hasDefaultValuesToBe = true;
             }
         }
-        final boolean hasDefaultValues = hasDefaultValuesToBe;
 
         if (type == PTableType.VIEW) {
             TableRef tableRef = resolver.getTables().get(0);
@@ -204,7 +200,7 @@ public class CreateTableCompiler {
             @Override
             public MutationState execute() throws SQLException {
                 try {
-                    return client.createTable(create, splits, parent, viewStatement, viewType, viewColumnConstants, isViewColumnReferenced, hasDefaultValues);
+                    return client.createTable(create, splits, parent, viewStatement, viewType, viewColumnConstants, isViewColumnReferenced);
                 } finally {
                     if (client.getConnection() != connection) {
                         client.getConnection().close();

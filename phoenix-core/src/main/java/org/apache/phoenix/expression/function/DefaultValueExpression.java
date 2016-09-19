@@ -35,19 +35,17 @@ import org.apache.phoenix.util.ExpressionUtil;
 
 /**
  *
- * Function used to provide an alternative value when the first argument is null.
- * Usage:
- * COALESCE(expr1,expr2)
- * If expr1 is not null, then it is returned, otherwise expr2 is returned.
+ * Internal function used to return the default value for a column if it was not explicitly set during UPSERT.
+ *
+ * If expr1 is evaluated (can be null), then it is returned, otherwise expr2 is returned.
  *
  * TODO: better bind parameter type matching, since arg2 must be coercible
  * to arg1. consider allowing a common base type?
  *
  * @since 0.1
  */
-//TODO: extend BaseExpression instead
 public class DefaultValueExpression extends ScalarFunction {
-    public static final String NAME = "DEFAUL";
+    public static final String NAME = "DEFAULT";
 
     public DefaultValueExpression() {
     }
