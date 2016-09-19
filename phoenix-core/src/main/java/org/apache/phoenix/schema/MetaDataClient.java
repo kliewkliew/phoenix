@@ -863,7 +863,7 @@ public class MetaDataClient {
         }
     }
 
-    public MutationState createTable(CreateTableStatement statement, byte[][] splits, PTable parent, String viewStatement, ViewType viewType, byte[][] viewColumnConstants, BitSet isViewColumnReferenced) throws SQLException {
+    public MutationState createTable(CreateTableStatement statement, byte[][] splits, PTable parent, String viewStatement, ViewType viewType, byte[][] viewColumnConstants, BitSet isViewColumnReferenced, boolean hasDefaultValues) throws SQLException {
         TableName tableName = statement.getTableName();
         Map<String,Object> tableProps = Maps.newHashMapWithExpectedSize(statement.getProps().size());
         Map<String,Object> commonFamilyProps = Maps.newHashMapWithExpectedSize(statement.getProps().size() + 1);
@@ -917,7 +917,7 @@ public class MetaDataClient {
                     true, NamedTableNode.create(statement.getTableName()), statement.getTableType());
             }
         }
-        table = createTableInternal(statement, splits, parent, viewStatement, viewType, viewColumnConstants, isViewColumnReferenced, null, null, null, tableProps, commonFamilyProps);
+        table = createTableInternal(statement, splits, parent, viewStatement, viewType, viewColumnConstants, isViewColumnReferenced, hasDefaultValues, null, null, null, tableProps, commonFamilyProps);
             
         if (table == null || table.getType() == PTableType.VIEW || table.isTransactional()) {
             return new MutationState(0,connection);
@@ -1429,7 +1429,7 @@ public class MetaDataClient {
                 }
                 PrimaryKeyConstraint pk = FACTORY.primaryKey(null, allPkColumns);
                 CreateTableStatement tableStatement = FACTORY.createTable(indexTableName, statement.getProps(), columnDefs, pk, statement.getSplitNodes(), PTableType.INDEX, statement.ifNotExists(), null, null, statement.getBindCount());
-                table = createTableInternal(tableStatement, splits, dataTable, null, null, null, null, indexId, statement.getIndexType(), asyncCreatedDate, tableProps, commonFamilyProps);
+                table = createTableInternal(tableStatement, splits, dataTable, null, null, null, null, false, indexId, statement.getIndexType(), asyncCreatedDate, tableProps, commonFamilyProps);
                 break;
             } catch (ConcurrentTableMutationException e) { // Can happen if parent data table changes while above is in progress
                 if (numRetries<5) {
@@ -1625,8 +1625,8 @@ public class MetaDataClient {
     
     private PTable createTableInternal(CreateTableStatement statement, byte[][] splits,
             final PTable parent, String viewStatement, ViewType viewType,
-            final byte[][] viewColumnConstants, final BitSet isViewColumnReferenced, Short indexId,
-            IndexType indexType, Date asyncCreatedDate,
+            final byte[][] viewColumnConstants, final BitSet isViewColumnReferenced, boolean hasDefaultValues,
+            Short indexId, IndexType indexType, Date asyncCreatedDate,
             Map<String,Object> tableProps,
             Map<String,Object> commonFamilyProps) throws SQLException {
         final PTableType tableType = statement.getTableType();
@@ -1782,13 +1782,13 @@ public class MetaDataClient {
             Boolean storeNullsProp = (Boolean) TableProperty.STORE_NULLS.getValue(tableProps);
             if (storeNullsProp == null) {
                 if (parent == null) {
-                    storeNulls = connection.getQueryServices().getProps().getBoolean(
+                    storeNulls = hasDefaultValues || connection.getQueryServices().getProps().getBoolean(
                                     QueryServices.DEFAULT_STORE_NULLS_ATTRIB,
                                     QueryServicesOptions.DEFAULT_STORE_NULLS);
                     tableProps.put(PhoenixDatabaseMetaData.STORE_NULLS, Boolean.valueOf(storeNulls));
                 }
             } else {
-                storeNulls = storeNullsProp;
+                storeNulls = hasDefaultValues || storeNullsProp;
             }
             Boolean transactionalProp = (Boolean) TableProperty.TRANSACTIONAL.getValue(tableProps);
             if (transactionalProp != null && parent != null) {
