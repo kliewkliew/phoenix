@@ -684,6 +684,11 @@ public class TestUtil {
                 public boolean isViewReferenced() {
                     return false;
                 }
+
+                @Override
+                public Expression getDefaultExpression() {
+                    return null;
+                }
                 
                 @Override
                 public String getExpressionStr() {

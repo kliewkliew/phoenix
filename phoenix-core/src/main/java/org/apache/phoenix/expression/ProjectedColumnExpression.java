@@ -41,7 +41,7 @@ public class ProjectedColumnExpression extends ColumnExpression {
 	private String displayName;
 	private final Collection<PColumn> columns;
     private PColumn column;
-	
+
 	public ProjectedColumnExpression() {
         this.columns = Collections.emptyList();
 	}
@@ -57,7 +57,7 @@ public class ProjectedColumnExpression extends ColumnExpression {
         this.position = position;
         this.displayName = displayName;
     }
-    
+
     public static KeyValueSchema buildSchema(Collection<PColumn> columns) {
         KeyValueSchemaBuilder builder = new KeyValueSchemaBuilder(0);
         for (PColumn column : columns) {
@@ -67,24 +67,24 @@ public class ProjectedColumnExpression extends ColumnExpression {
         }
         return builder.build();
     }
-    
+
     public KeyValueSchema getSchema() {
         if (this.schema == null) {
             this.schema = buildSchema(columns);
-            this.bitSet = ValueBitSet.newInstance(schema);            
+            this.bitSet = ValueBitSet.newInstance(schema);
         }
     	return schema;
     }
-    
+
     public int getPosition() {
     	return position;
     }
-    
+
     @Override
     public String toString() {
         return displayName;
     }
-	
+
 	@Override
     public int hashCode() {
         final int prime = 31;
@@ -113,7 +113,7 @@ public class ProjectedColumnExpression extends ColumnExpression {
             int maxOffset = ptr.getOffset() + ptr.getLength() - bitSet.getEstimatedLength();
             schema.iterator(ptr, position, bitSet);
             Boolean hasValue = schema.next(ptr, position, maxOffset, bitSet);
-            if (hasValue == null || !hasValue.booleanValue())
+            if (hasValue == null)
                 return false;
         } catch (IOException e) {
             return false;

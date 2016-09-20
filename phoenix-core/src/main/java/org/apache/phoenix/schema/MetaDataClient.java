@@ -434,7 +434,7 @@ public class MetaDataClient {
 
     /**
      * Update the cache with the latest as of the connection scn.
-     * @param functioNames
+     * @param functionNames
      * @return the timestamp from the server, negative if the function was added to the cache and positive otherwise
      * @throws SQLException
      */
@@ -876,7 +876,7 @@ public class MetaDataClient {
             }
 
             PColumn column = new PColumnImpl(PNameFactory.newName(columnName), familyName, def.getDataType(),
-                    def.getMaxLength(), def.getScale(), isNull, position, sortOrder, def.getArraySize(), null, false, def.getExpression(), isRowTimestamp, false);
+                    def.getMaxLength(), def.getScale(), isNull, position, sortOrder, def.getArraySize(), null, false, def.getDefaultExpression(), def.getExpression(), isRowTimestamp, false);
             return column;
         } catch (IllegalArgumentException e) { // Based on precondition check in constructor
             throw new SQLException(e);
@@ -1645,8 +1645,8 @@ public class MetaDataClient {
 
     private PTable createTableInternal(CreateTableStatement statement, byte[][] splits,
             final PTable parent, String viewStatement, ViewType viewType,
-            final byte[][] viewColumnConstants, final BitSet isViewColumnReferenced, Short indexId,
-            IndexType indexType, Date asyncCreatedDate,
+            final byte[][] viewColumnConstants, final BitSet isViewColumnReferenced,
+            Short indexId, IndexType indexType, Date asyncCreatedDate,
             Map<String,Object> tableProps,
             Map<String,Object> commonFamilyProps) throws SQLException {
         final PTableType tableType = statement.getTableType();
@@ -2020,6 +2020,9 @@ public class MetaDataClient {
                     }
                     isPK = true;
                 } else {
+                    if (colDef.getDefaultExpression() != null) {
+                        storeNulls = true;
+                    }
                     // do not allow setting NOT-NULL constraint on non-primary columns.
                     if (  Boolean.FALSE.equals(colDef.isNull()) &&
                         ( isPK || ( pkConstraint != null && !pkConstraint.contains(colDef.getColumnDefName())))) {

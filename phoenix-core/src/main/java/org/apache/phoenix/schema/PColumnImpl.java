@@ -19,6 +19,7 @@ package org.apache.phoenix.schema;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.phoenix.coprocessor.generated.PTableProtos;
+import org.apache.phoenix.expression.Expression;
 import org.apache.phoenix.query.QueryConstants;
 import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.util.SizedUtil;
@@ -37,6 +38,7 @@ public class PColumnImpl implements PColumn {
     private Integer arraySize;
     private byte[] viewConstant;
     private boolean isViewReferenced;
+    private Expression defaultExpression;
     private String expressionStr;
     private boolean isRowTimestamp;
     private boolean isDynamic;
@@ -51,13 +53,20 @@ public class PColumnImpl implements PColumn {
                        Integer scale,
                        boolean nullable,
                        int position,
-                       SortOrder sortOrder, Integer arrSize, byte[] viewConstant, boolean isViewReferenced, String expressionStr, boolean isRowTimestamp, boolean isDynamic) {
-        init(name, familyName, dataType, maxLength, scale, nullable, position, sortOrder, arrSize, viewConstant, isViewReferenced, expressionStr, isRowTimestamp, isDynamic);
+                       SortOrder sortOrder,
+                       Integer arrSize,
+                       byte[] viewConstant,
+                       boolean isViewReferenced,
+                       Expression defaultExpression,
+                       String expressionStr,
+                       boolean isRowTimestamp,
+                       boolean isDynamic) {
+        init(name, familyName, dataType, maxLength, scale, nullable, position, sortOrder, arrSize, viewConstant, isViewReferenced, defaultExpression, expressionStr, isRowTimestamp, isDynamic);
     }
 
     public PColumnImpl(PColumn column, int position) {
         this(column.getName(), column.getFamilyName(), column.getDataType(), column.getMaxLength(),
-                column.getScale(), column.isNullable(), position, column.getSortOrder(), column.getArraySize(), column.getViewConstant(), column.isViewReferenced(), column.getExpressionStr(), column.isRowTimestamp(), column.isDynamic());
+                column.getScale(), column.isNullable(), position, column.getSortOrder(), column.getArraySize(), column.getViewConstant(), column.isViewReferenced(), column.getDefaultExpression(), column.getExpressionStr(), column.isRowTimestamp(), column.isDynamic());
     }
 
     private void init(PName name,
@@ -69,7 +78,12 @@ public class PColumnImpl implements PColumn {
             int position,
             SortOrder sortOrder,
             Integer arrSize,
-            byte[] viewConstant, boolean isViewReferenced, String expressionStr, boolean isRowTimestamp, boolean isDynamic) {
+            byte[] viewConstant,
+            boolean isViewReferenced,
+            Expression defaultExpression,
+            String expressionStr,
+            boolean isRowTimestamp,
+            boolean isDynamic) {
     	Preconditions.checkNotNull(sortOrder);
         this.dataType = dataType;
         if (familyName == null) {
@@ -91,6 +105,7 @@ public class PColumnImpl implements PColumn {
         this.arraySize = arrSize;
         this.viewConstant = viewConstant;
         this.isViewReferenced = isViewReferenced;
+        this.defaultExpression = defaultExpression;
         this.expressionStr = expressionStr;
         this.isRowTimestamp = isRowTimestamp;
         this.isDynamic = isDynamic;
@@ -126,6 +141,11 @@ public class PColumnImpl implements PColumn {
     @Override
     public Integer getScale() {
         return scale;
+    }
+
+    @Override
+    public Expression getDefaultExpression() {
+        return defaultExpression;
     }
     
     @Override
@@ -251,8 +271,9 @@ public class PColumnImpl implements PColumn {
         if (column.hasIsDynamic()) {
         	isDynamic = column.getIsDynamic();
         }
+        // TODO: compile Expression instead of returning nullz
         return new PColumnImpl(columnName, familyName, dataType, maxLength, scale, nullable, position, sortOrder,
-                arraySize, viewConstant, isViewReferenced, expressionStr, isRowTimestamp, isDynamic);
+                arraySize, viewConstant, isViewReferenced, null, expressionStr, isRowTimestamp, isDynamic);
     }
 
     public static PTableProtos.PColumn toProto(PColumn column) {

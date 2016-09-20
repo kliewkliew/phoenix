@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.phoenix.coprocessor.generated.PTableProtos;
 import org.apache.phoenix.exception.DataExceedsCapacityException;
+import org.apache.phoenix.expression.LiteralExpression;
 import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.index.IndexMaintainer;
@@ -55,6 +56,7 @@ import org.apache.phoenix.schema.types.PDouble;
 import org.apache.phoenix.schema.types.PFloat;
 import org.apache.phoenix.schema.types.PVarchar;
 import org.apache.phoenix.util.ByteUtil;
+import org.apache.phoenix.util.ExpressionUtil;
 import org.apache.phoenix.util.SchemaUtil;
 import org.apache.phoenix.util.SizedUtil;
 import org.apache.phoenix.util.StringUtil;
@@ -583,9 +585,13 @@ public class PTableImpl implements PTable {
 
     @Override
     public int newKey(ImmutableBytesWritable key, byte[][] values) {
+        List<PColumn> columns = getPKColumns();
         int nValues = values.length;
-        while (nValues > 0 && (values[nValues-1] == null || values[nValues-1].length == 0)) {
-            nValues--;
+        for (int pkColNum = 0; pkColNum < values.length; pkColNum++) {
+            if ((values[nValues-1] == null || values[nValues-1].length == 0) &&
+                    (null == columns.get(nValues-1).getExpressionStr() || columns.get(nValues-1).getExpressionStr().isEmpty())) {
+                nValues--;
+            }
         }
         int i = 0;
         TrustedByteArrayOutputStream os = new TrustedByteArrayOutputStream(SchemaUtil.estimateKeyLength(this));
@@ -596,7 +602,6 @@ public class PTableImpl implements PTable {
                 i++;
                 os.write(QueryConstants.SEPARATOR_BYTE_ARRAY);
             }
-            List<PColumn> columns = getPKColumns();
             int nColumns = columns.size();
             PDataType type = null;
             SortOrder sortOrder = null;
@@ -612,7 +617,19 @@ public class PTableImpl implements PTable {
                 // This will throw if the value is null and the type doesn't allow null
                 byte[] byteValue = values[i++];
                 if (byteValue == null) {
-                    byteValue = ByteUtil.EMPTY_BYTE_ARRAY;
+                    if (column.getExpressionStr() != null) {
+                        try {
+                            LiteralExpression defaultLiteral = ExpressionUtil.getConstantExpression(column.getDefaultExpression(), key);
+                            ImmutableBytesWritable valuePtr = new ImmutableBytesWritable();
+                            defaultLiteral.evaluate(null, valuePtr);
+                            byteValue = valuePtr.copyBytes();
+                        } catch (SQLException e) {
+                            //TODO
+                        }
+                    }
+                    else {
+                        byteValue = ByteUtil.EMPTY_BYTE_ARRAY;
+                    }
                 }
                 wasNull = byteValue.length == 0;
                 // An empty byte array return value means null. Do this,

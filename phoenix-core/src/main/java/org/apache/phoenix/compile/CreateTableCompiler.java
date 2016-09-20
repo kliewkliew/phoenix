@@ -62,6 +62,7 @@ import org.apache.phoenix.schema.TableRef;
 import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.schema.types.PVarbinary;
 import org.apache.phoenix.util.ByteUtil;
+import org.apache.phoenix.util.ExpressionUtil;
 import org.apache.phoenix.util.QueryUtil;
 
 import com.google.common.collect.Iterators;
@@ -93,10 +94,19 @@ public class CreateTableCompiler {
         BitSet isViewColumnReferencedToBe = null;
         // Check whether column families having local index column family suffix or not if present
         // don't allow creating table.
-        for(ColumnDef columnDef: create.getColumnDefs()) {
-            if(columnDef.getColumnDefName().getFamilyName()!=null && columnDef.getColumnDefName().getFamilyName().contains(QueryConstants.LOCAL_INDEX_COLUMN_FAMILY_PREFIX)) {
+        for (ColumnDef columnDef: create.getColumnDefs()) {
+            if (columnDef.getColumnDefName().getFamilyName()!=null && columnDef.getColumnDefName().getFamilyName().contains(QueryConstants.LOCAL_INDEX_COLUMN_FAMILY_PREFIX)) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.UNALLOWED_COLUMN_FAMILY)
                 .build().buildException();
+            }
+            if (columnDef.getDefaultExpressionNode() != null) {
+                ExpressionCompiler compiler = new ExpressionCompiler(context);
+                Expression defaultExpression = columnDef.getDefaultExpressionNode().accept(compiler);
+                if (!columnDef.getDefaultExpressionNode().isStateless() || !ExpressionUtil.isConstant(defaultExpression)) {
+                    throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
+                            .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
+                }
+                columnDef.setDefaultExpression(defaultExpression);
             }
         }
 

@@ -21,14 +21,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Set;
 
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -47,6 +46,7 @@ import org.apache.phoenix.expression.ProjectedColumnExpression;
 import org.apache.phoenix.expression.aggregator.ClientAggregators;
 import org.apache.phoenix.expression.aggregator.ServerAggregators;
 import org.apache.phoenix.expression.function.ArrayIndexFunction;
+import org.apache.phoenix.expression.function.DefaultValueExpression;
 import org.apache.phoenix.expression.function.SingleAggregateFunction;
 import org.apache.phoenix.expression.visitor.ExpressionVisitor;
 import org.apache.phoenix.expression.visitor.ProjectedColumnExpressionVisitor;
@@ -170,6 +170,9 @@ public class ProjectionCompiler {
             ImmutableBytesWritable ptr = context.getTempPtr();
             if (IndexUtil.getViewConstantValue(column, ptr)) {
                 expression = LiteralExpression.newConstant(column.getDataType().toObject(ptr), expression.getDataType());
+            }
+            if (ref.getColumn().getDefaultExpression() != null) {
+                expression = new DefaultValueExpression(Arrays.asList(expression, ref.getColumn().getDefaultExpression()));
             }
             projectedExpressions.add(expression);
             boolean isCaseSensitive = !SchemaUtil.normalizeIdentifier(colName).equals(colName);
