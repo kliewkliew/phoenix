@@ -113,7 +113,7 @@ public class ProjectedColumnExpression extends ColumnExpression {
             int maxOffset = ptr.getOffset() + ptr.getLength() - bitSet.getEstimatedLength();
             schema.iterator(ptr, position, bitSet);
             Boolean hasValue = schema.next(ptr, position, maxOffset, bitSet);
-            if (hasValue == null || !hasValue)
+            if (hasValue == null)
                 return false;
         } catch (IOException e) {
             return false;
