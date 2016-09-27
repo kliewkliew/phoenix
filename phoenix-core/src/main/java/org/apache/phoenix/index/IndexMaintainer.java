@@ -420,7 +420,7 @@ public class IndexMaintainer implements Writable, Iterable<ColumnReference> {
 	                try {
 	                    // Surround constant with cast so that we can still know the original type. Otherwise, if we lose the type,
 	                    // (for example when VARCHAR becomes CHAR), it can lead to problems in the type translation we do between data tables and indexes.
-	                    if (column.isNullable() && ExpressionUtil.isConstant(expression)) {
+	                    if (column.isNullable() && ExpressionUtil.isPureExpression(expression)) {
 	                        expression = CoerceExpression.create(expression, indexColumn.getDataType());
 	                    }
                         this.indexedExpressions.add(expression);

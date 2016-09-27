@@ -96,7 +96,7 @@ public class InListExpression extends BaseSingleExpression {
         if (isNegate) { 
             expression = NotExpression.create(expression, ptr);
         }
-        if (ExpressionUtil.isConstant(expression)) {
+        if (ExpressionUtil.isPureExpression(expression)) {
             return ExpressionUtil.getConstantExpression(expression, ptr);
         }
         return expression;

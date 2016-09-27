@@ -22,7 +22,11 @@ public class ExpressionUtil {
 	private ExpressionUtil() {
 	}
 
-	public static boolean isConstant(Expression expression) {
+    public static boolean isConstant(Expression expression) {
+        return (expression.isStateless() && expression.getDeterminism() == Determinism.ALWAYS);
+    }
+
+	public static boolean isPureExpression(Expression expression) {
 		return (expression.isStateless() && (expression.getDeterminism() == Determinism.ALWAYS
 				|| expression.getDeterminism() == Determinism.PER_STATEMENT));
 	}
@@ -38,7 +42,7 @@ public class ExpressionUtil {
     }
 
     public static boolean isNull(Expression expression, ImmutableBytesWritable ptr) {
-        return isConstant(expression) && (!expression.evaluate(null, ptr) || ptr.getLength() == 0);
+        return isPureExpression(expression) && (!expression.evaluate(null, ptr) || ptr.getLength() == 0);
     }
 
     public static LiteralExpression getNullExpression(Expression expression) throws SQLException {

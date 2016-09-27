@@ -43,7 +43,7 @@ public class IsNullExpression extends BaseSingleExpression {
         if (!child.isNullable()) {
             return LiteralExpression.newConstant(negate, PBoolean.INSTANCE, child.getDeterminism());
         }
-        if (ExpressionUtil.isConstant(child)) {
+        if (ExpressionUtil.isPureExpression(child)) {
             boolean evaluated = child.evaluate(null, ptr);
             return LiteralExpression.newConstant(negate ^ (!evaluated || ptr.getLength() == 0), PBoolean.INSTANCE, child.getDeterminism());
         }

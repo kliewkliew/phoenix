@@ -55,7 +55,7 @@ public class CaseExpression extends BaseCompoundExpression {
     
     public static Expression create(List<Expression> children) throws SQLException {
         CaseExpression caseExpression = new CaseExpression(coerceIfNecessary(children));
-        if (ExpressionUtil.isConstant(caseExpression)) {
+        if (ExpressionUtil.isPureExpression(caseExpression)) {
             ImmutableBytesWritable ptr = new ImmutableBytesWritable();
             int index = caseExpression.evaluateIndexOf(null, ptr);
             if (index < 0) {

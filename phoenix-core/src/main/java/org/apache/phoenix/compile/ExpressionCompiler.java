@@ -335,7 +335,7 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
                 }
             }
         }
-        if (ExpressionUtil.isConstant(expression)) {
+        if (ExpressionUtil.isPureExpression(expression)) {
             return ExpressionUtil.getConstantExpression(expression, ptr);
         }
         expression = addExpression(expression);
@@ -407,7 +407,7 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
             addColumn(column);
         }
         Expression expression = ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
-        if (column.getDefaultExpression() != null) {
+        if (column.getDefaultExpression() != null && !SchemaUtil.isPKColumn(column)) {
             expression = new DefaultValueExpression(Arrays.asList(expression, column.getDefaultExpression()));
         }
         Expression wrappedExpression = wrapGroupByExpression(expression);
@@ -533,7 +533,7 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
         } else {
             expression = StringBasedLikeExpression.create(children, node.getLikeType());
         }
-        if (ExpressionUtil.isConstant(expression)) {
+        if (ExpressionUtil.isPureExpression(expression)) {
             ImmutableBytesWritable ptr = context.getTempPtr();
             if (!expression.evaluate(null, ptr)) {
                 return LiteralExpression.newConstant(null, expression.getDeterminism());
@@ -738,7 +738,7 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
         ImmutableBytesWritable ptr = context.getTempPtr();
 
         // If all children are literals, just evaluate now
-        if (ExpressionUtil.isConstant(expression)) {
+        if (ExpressionUtil.isPureExpression(expression)) {
             return ExpressionUtil.getConstantExpression(expression, ptr); 
         } 
         else if (isNull) {
@@ -1193,7 +1193,7 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
             }
         }
         ImmutableBytesWritable ptr = context.getTempPtr();
-        if (ExpressionUtil.isConstant(expression)) {
+        if (ExpressionUtil.isPureExpression(expression)) {
             return ExpressionUtil.getConstantExpression(expression, ptr);
         }
         return wrapGroupByExpression(expression);
@@ -1277,7 +1277,7 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
 
         boolean rowKeyOrderOptimizable = context.getCurrentTable().getTable().rowKeyOrderOptimizable();
         ArrayConstructorExpression arrayExpression = new ArrayConstructorExpression(children, arrayElemDataType, rowKeyOrderOptimizable);
-        if (ExpressionUtil.isConstant(arrayExpression)) {
+        if (ExpressionUtil.isPureExpression(arrayExpression)) {
             for (int i = 0; i < children.size(); i++) {
                 Expression child = children.get(i);
                 child.evaluate(null, ptr);

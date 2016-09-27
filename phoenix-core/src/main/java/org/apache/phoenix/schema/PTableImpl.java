@@ -622,7 +622,7 @@ public class PTableImpl implements PTable {
                             LiteralExpression defaultLiteral = ExpressionUtil.getConstantExpression(column.getDefaultExpression(), key);
                             ImmutableBytesWritable valuePtr = new ImmutableBytesWritable();
                             defaultLiteral.evaluate(null, valuePtr);
-                            byteValue = valuePtr.copyBytes();
+                            byteValue = ByteUtil.copyKeyBytesIfNecessary(valuePtr);
                         } catch (SQLException e) {
                             //TODO
                         }
@@ -828,7 +828,7 @@ public class PTableImpl implements PTable {
             byte[] qualifier = column.getName().getBytes();
             PDataType<?> type = column.getDataType();
             // Check null, since some types have no byte representation for null
-            boolean isNull = type.isNull(byteValue);
+            boolean isNull = type.isNull(byteValue) && column.getDefaultExpression() == null;
             if (isNull && !column.isNullable()) {
                 throw new ConstraintViolationException(name.getString() + "." + column.getName().getString() + " may not be null");
             } else if (isNull && PTableImpl.this.isImmutableRows()) {

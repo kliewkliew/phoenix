@@ -60,7 +60,7 @@ public class CoalesceFunction extends ScalarFunction {
         Expression firstChild = children.get(0);
         Expression secondChild = children.get(1);
 
-        if (ExpressionUtil.isConstant(secondChild)) { // is literal
+        if (ExpressionUtil.isPureExpression(secondChild)) { // is literal
 
             ImmutableBytesWritable ptr = new ImmutableBytesPtr();
             secondChild.evaluate(null, ptr);
