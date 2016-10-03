@@ -226,6 +226,8 @@ public class PColumnImpl implements PColumn {
         return isDynamic;
     }
 
+    @Override
+    public void setDefaultExpression(Expression defaultExpression) { this.defaultExpression = defaultExpression; }
     /**
      * Create a PColumn instance from PBed PColumn instance
      * 

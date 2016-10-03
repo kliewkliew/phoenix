@@ -702,6 +702,9 @@ public class TestUtil {
     			public boolean isDynamic() {
     				return false;
     			}
+
+    			@Override
+                public void setDefaultExpression(Expression defaultExpression) { }
             })), null);
             aggregationManager.setAggregators(new ClientAggregators(Collections.<SingleAggregateFunction>singletonList(func), 1));
             ClientAggregators aggregators = aggregationManager.getAggregators();

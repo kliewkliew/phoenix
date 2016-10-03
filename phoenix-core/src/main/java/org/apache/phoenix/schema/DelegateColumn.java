@@ -92,4 +92,7 @@ public class DelegateColumn extends DelegateDatum implements PColumn {
 	public boolean isDynamic() {
 		return getDelegate().isDynamic();
 	}
+
+	@Override
+    public void setDefaultExpression(Expression defaultExpression) { getDelegate().setDefaultExpression(defaultExpression); }
 }

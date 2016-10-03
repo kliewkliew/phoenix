@@ -82,6 +82,8 @@ import org.apache.phoenix.parse.ArrayElemRefNode;
 import org.apache.phoenix.parse.BindParseNode;
 import org.apache.phoenix.parse.CaseParseNode;
 import org.apache.phoenix.parse.CastParseNode;
+import org.apache.phoenix.parse.ColumnDef;
+import org.apache.phoenix.parse.ColumnName;
 import org.apache.phoenix.parse.ColumnParseNode;
 import org.apache.phoenix.parse.ComparisonParseNode;
 import org.apache.phoenix.parse.DivideParseNode;
@@ -97,6 +99,7 @@ import org.apache.phoenix.parse.ModulusParseNode;
 import org.apache.phoenix.parse.MultiplyParseNode;
 import org.apache.phoenix.parse.NotParseNode;
 import org.apache.phoenix.parse.OrParseNode;
+import org.apache.phoenix.parse.ParseNodeFactory;
 import org.apache.phoenix.parse.PFunction;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.RowValueConstructorParseNode;
@@ -407,6 +410,17 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
             addColumn(column);
         }
         Expression expression = ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
+        if (column.getExpressionStr() != null && !column.getExpressionStr().isEmpty() && column.getDefaultExpression() == null) {
+            // We have the default expression but it has not been compiled yet
+            ExpressionCompiler compiler = new ExpressionCompiler(context);
+            ColumnDef columnDef = new ParseNodeFactory().columnDef(ColumnName.caseSensitiveColumnName(column.getFamilyName().getString(), column.getName().getString()), column.getDataType().getSqlTypeName(), column.isNullable(), column.getMaxLength(), column.getScale(), false, column.getSortOrder(), column.getExpressionStr(), column.isRowTimestamp());
+            Expression defaultExpression = columnDef.getDefaultExpressionNode().accept(compiler);
+            if (!columnDef.getDefaultExpressionNode().isStateless() || !ExpressionUtil.isConstant(defaultExpression)) {
+                throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
+                .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
+            }
+            column.setDefaultExpression(defaultExpression);
+        }
         if (column.getDefaultExpression() != null && !SchemaUtil.isPKColumn(column)) {
             expression = new DefaultValueExpression(Arrays.asList(expression, column.getDefaultExpression()));
         }

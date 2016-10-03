@@ -65,4 +65,6 @@ public interface PColumn extends PDatum {
     boolean isRowTimestamp();
     
     boolean isDynamic();
+
+    void setDefaultExpression(Expression defaultExpression);
 }
