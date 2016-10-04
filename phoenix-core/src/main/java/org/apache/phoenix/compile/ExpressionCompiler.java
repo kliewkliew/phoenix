@@ -104,6 +104,7 @@ import org.apache.phoenix.parse.PFunction;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.RowValueConstructorParseNode;
 import org.apache.phoenix.parse.SequenceValueParseNode;
+import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.parse.StringConcatParseNode;
 import org.apache.phoenix.parse.SubqueryParseNode;
 import org.apache.phoenix.parse.SubtractParseNode;
@@ -412,8 +413,19 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
         Expression expression = ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
         if (column.getExpressionStr() != null && !column.getExpressionStr().isEmpty() && column.getDefaultExpression() == null) {
             // We have the default expression but it has not been compiled yet
+            ParseNode defaultExprNode = SQLParser.parseCondition(column.getExpressionStr());
             ExpressionCompiler compiler = new ExpressionCompiler(context);
-            ColumnDef columnDef = new ParseNodeFactory().columnDef(ColumnName.caseSensitiveColumnName(column.getFamilyName().getString(), column.getName().getString()), column.getDataType().getSqlTypeName(), column.isNullable(), column.getMaxLength(), column.getScale(), false, column.getSortOrder(), column.getExpressionStr(), column.isRowTimestamp());
+            ColumnDef columnDef = new ParseNodeFactory().columnDef(
+                    ColumnName.caseSensitiveColumnName(column.getFamilyName().getString(), column.getName().getString()),
+                    column.getDataType().getSqlTypeName(),
+                    column.isNullable(),
+                    column.getMaxLength(),
+                    column.getScale(),
+                    false,
+                    column.getSortOrder(),
+                    defaultExprNode,
+                    column.getExpressionStr(),
+                    column.isRowTimestamp());
             Expression defaultExpression = columnDef.getDefaultExpressionNode().accept(compiler);
             if (!columnDef.getDefaultExpressionNode().isStateless() || !ExpressionUtil.isConstant(defaultExpression)) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
