@@ -649,7 +649,6 @@ column_def returns [ColumnDef ret]
             s == null ? null : Integer.parseInt( s.getText() ),
             pk != null, 
             order == null ? SortOrder.getDefault() : SortOrder.fromDDLValue(order.getText()),
-            (ParseNode) df,
             df == null ? null : df.toString(),
             rr != null); }
     ;

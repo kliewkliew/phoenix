@@ -413,7 +413,6 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
         Expression expression = ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
         if (column.getExpressionStr() != null && !column.getExpressionStr().isEmpty() && column.getDefaultExpression() == null) {
             // We have the default expression but it has not been compiled yet
-            ParseNode defaultExprNode = SQLParser.parseCondition(column.getExpressionStr());
             ExpressionCompiler compiler = new ExpressionCompiler(context);
             ColumnDef columnDef = new ParseNodeFactory().columnDef(
                     ColumnName.caseSensitiveColumnName(column.getFamilyName().getString(), column.getName().getString()),
@@ -423,7 +422,6 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
                     column.getScale(),
                     false,
                     column.getSortOrder(),
-                    defaultExprNode,
                     column.getExpressionStr(),
                     column.isRowTimestamp());
             Expression defaultExpression = columnDef.getDefaultExpressionNode().accept(compiler);

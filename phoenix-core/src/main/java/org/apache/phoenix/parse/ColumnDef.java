@@ -55,7 +55,7 @@ public class ColumnDef {
     private final boolean isRowTimestamp;
 
     ColumnDef(ColumnName columnDefName, String sqlTypeName, boolean isArray, Integer arrSize, Boolean isNull, Integer maxLength,
-              Integer scale, boolean isPK, SortOrder sortOrder, ParseNode defaultExpressionNode, String expressionStr, boolean isRowTimestamp) {
+              Integer scale, boolean isPK, SortOrder sortOrder, String expressionStr, boolean isRowTimestamp) {
         try {
             Preconditions.checkNotNull(sortOrder);
             PDataType baseType;
@@ -128,13 +128,13 @@ public class ColumnDef {
             this.isPK = isPK;
             this.sortOrder = sortOrder;
             this.dataType = dataType;
-            this.defaultExpression = null;
-            if (defaultExpressionNode != null && !defaultExpressionNode.isStateless()) {
+            this.expressionStr = expressionStr;
+            this.defaultExpressionNode = SQLParser.parseCondition(expressionStr);
+            if (!defaultExpressionNode.isStateless()) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
                         .setColumnName(columnDefName.getColumnName()).build().buildException();
             }
-            this.defaultExpressionNode = defaultExpressionNode;
-            this.expressionStr = expressionStr;
+            this.defaultExpression = null;
             this.isRowTimestamp = isRowTimestamp;
         } catch (SQLException e) {
             throw new ParseException(e);
@@ -143,7 +143,7 @@ public class ColumnDef {
 
     ColumnDef(ColumnName columnDefName, String sqlTypeName, Boolean isNull, Integer maxLength,
             Integer scale, boolean isPK, SortOrder sortOrder, String expressionStr, boolean isRowTimestamp) {
-        this(columnDefName, sqlTypeName, false, 0, isNull, maxLength, scale, isPK, sortOrder, null, expressionStr, isRowTimestamp);
+        this(columnDefName, sqlTypeName, false, 0, isNull, maxLength, scale, isPK, sortOrder, expressionStr, isRowTimestamp);
     }
 
     public ColumnName getColumnDefName() {
