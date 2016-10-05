@@ -2020,7 +2020,7 @@ public class MetaDataClient {
                     }
                     isPK = true;
                 } else {
-                    if (colDef.getDefaultExpression() != null) {
+                    if (colDef.getDefaultExpressionNode() != null) {
                         storeNulls = true;
                     }
                     // do not allow setting NOT-NULL constraint on non-primary columns.
