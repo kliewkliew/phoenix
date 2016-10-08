@@ -129,8 +129,14 @@ public class ColumnDef {
             this.sortOrder = sortOrder;
             this.dataType = dataType;
             this.expressionStr = expressionStr;
-            this.defaultExpressionNode = SQLParser.parseCondition(expressionStr);
-            if (!defaultExpressionNode.isStateless()) {
+            ParseNode tryDefaultExpressionNode = null;
+            try {
+                tryDefaultExpressionNode = SQLParser.parseCondition(expressionStr);
+            } catch (SQLException e) {
+                // Assume that this expression string is not a default value and should not be parsed
+            }
+            this.defaultExpressionNode = tryDefaultExpressionNode;
+            if (defaultExpressionNode != null && !defaultExpressionNode.isStateless()) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
                         .setColumnName(columnDefName.getColumnName()).build().buildException();
             }
