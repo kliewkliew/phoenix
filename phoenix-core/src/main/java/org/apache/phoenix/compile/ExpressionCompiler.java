@@ -69,6 +69,7 @@ import org.apache.phoenix.expression.TimestampSubtractExpression;
 import org.apache.phoenix.expression.function.ArrayAllComparisonExpression;
 import org.apache.phoenix.expression.function.ArrayAnyComparisonExpression;
 import org.apache.phoenix.expression.function.ArrayElemRefExpression;
+import org.apache.phoenix.expression.function.DefaultValueExpression;
 import org.apache.phoenix.expression.function.RoundDecimalExpression;
 import org.apache.phoenix.expression.function.RoundTimestampExpression;
 import org.apache.phoenix.parse.AddParseNode;
@@ -100,6 +101,7 @@ import org.apache.phoenix.parse.PFunction;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.RowValueConstructorParseNode;
 import org.apache.phoenix.parse.SequenceValueParseNode;
+import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.parse.StringConcatParseNode;
 import org.apache.phoenix.parse.SubqueryParseNode;
 import org.apache.phoenix.parse.SubtractParseNode;
@@ -406,6 +408,14 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
             addColumn(column);
         }
         Expression expression = ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
+        if (!SchemaUtil.isPKColumn(column)) {
+            if (column.getExpressionStr() != null){
+                ExpressionCompiler compiler = new ExpressionCompiler(context);
+                ParseNode defaultExpressionNode = new SQLParser(column.getExpressionStr()).parseExpression();
+                Expression defaultExpression = defaultExpressionNode.accept(compiler);
+                expression = new DefaultValueExpression(Arrays.asList(expression, defaultExpression));
+            }
+        }
         Expression wrappedExpression = wrapGroupByExpression(expression);
         // If we're in an aggregate expression
         // and we're not in the context of an aggregate function

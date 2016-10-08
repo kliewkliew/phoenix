@@ -2366,14 +2366,14 @@ public class MetaDataEndpointImpl extends MetaDataProtocol implements Coprocesso
     
     private class ColumnFinder extends StatelessTraverseAllExpressionVisitor<Void> {
         private boolean columnFound;
-        private final ColumnExpression columnExpression;
+        private final Expression columnExpression;
 
-        public ColumnFinder(ColumnExpression columnExpression) {
+        public ColumnFinder(Expression columnExpression) {
             this.columnExpression = columnExpression;
             columnFound = false;
         }
 
-        private Void process(ColumnExpression expression) {
+        private Void process(Expression expression) {
             if (expression.equals(columnExpression)) {
                 columnFound = true;
             }
@@ -2475,7 +2475,7 @@ public class MetaDataEndpointImpl extends MetaDataProtocol implements Coprocesso
                     ColumnResolver columnResolver = FromCompiler.getResolver(baseTableRef);
                     StatementContext context = new StatementContext(statement, columnResolver);
                     Expression whereExpression = WhereCompiler.compile(context, viewWhere);
-                    ColumnExpression colExpression =
+                    Expression colExpression =
                             new ColumnRef(baseTableRef, existingViewColumn.getPosition())
                                     .newColumnExpression();
                     ColumnFinder columnFinder = new ColumnFinder(colExpression);

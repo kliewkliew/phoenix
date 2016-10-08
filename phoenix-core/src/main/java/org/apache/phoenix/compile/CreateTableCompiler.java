@@ -94,9 +94,19 @@ public class CreateTableCompiler {
         // Check whether column families having local index column family suffix or not if present
         // don't allow creating table.
         for(ColumnDef columnDef: create.getColumnDefs()) {
-            if(columnDef.getColumnDefName().getFamilyName()!=null && columnDef.getColumnDefName().getFamilyName().contains(QueryConstants.LOCAL_INDEX_COLUMN_FAMILY_PREFIX)) {
+            if (columnDef.getColumnDefName().getFamilyName() != null && columnDef.getColumnDefName().getFamilyName().contains(QueryConstants.LOCAL_INDEX_COLUMN_FAMILY_PREFIX)) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.UNALLOWED_COLUMN_FAMILY)
-                .build().buildException();
+                        .build().buildException();
+            }
+            if (columnDef.getExpression() != null) {
+                ExpressionCompiler compiler = new ExpressionCompiler(context);
+                ParseNode defaulValueParseNode = new SQLParser(columnDef.getExpression()).parseExpression();
+                Expression defaultExpression = defaulValueParseNode.accept(compiler);
+                if (!defaulValueParseNode.isStateless() || defaultExpression.getDeterminism() != Determinism.ALWAYS) {
+                    throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
+                            .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
+                }
+
             }
         }
 
