@@ -431,7 +431,7 @@ public class MetaDataClient {
 
     /**
      * Update the cache with the latest as of the connection scn.
-     * @param functioNames
+     * @param functionNames
      * @return the timestamp from the server, negative if the function was added to the cache and positive otherwise
      * @throws SQLException
      */
@@ -1986,6 +1986,9 @@ public class MetaDataClient {
                     }
                     isPK = true;
                 } else {
+                    if (colDef.getExpression() != null) {
+                        storeNulls = true;
+                    }
                     // do not allow setting NOT-NULL constraint on non-primary columns.
                     if (  Boolean.FALSE.equals(colDef.isNull()) &&
                         ( isPK || ( pkConstraint != null && !pkConstraint.contains(colDef.getColumnDefName())))) {

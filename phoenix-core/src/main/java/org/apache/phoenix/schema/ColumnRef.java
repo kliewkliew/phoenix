@@ -18,11 +18,18 @@
 package org.apache.phoenix.schema;
 
 import org.apache.http.annotation.Immutable;
-import org.apache.phoenix.expression.ColumnExpression;
+import org.apache.phoenix.compile.ExpressionCompiler;
+import org.apache.phoenix.expression.Expression;
+import org.apache.phoenix.expression.function.DefaultValueExpression;
 import org.apache.phoenix.expression.KeyValueColumnExpression;
 import org.apache.phoenix.expression.ProjectedColumnExpression;
 import org.apache.phoenix.expression.RowKeyColumnExpression;
+import org.apache.phoenix.parse.ParseNode;
+import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.util.SchemaUtil;
+
+import java.sql.SQLException;
+import java.util.Arrays;
 
 
 /**
@@ -90,11 +97,11 @@ public class ColumnRef {
         return true;
     }
     
-    public ColumnExpression newColumnExpression() {
+    public Expression newColumnExpression() throws SQLException {
         return newColumnExpression(false, false);
     }
 
-    public ColumnExpression newColumnExpression(boolean schemaNameCaseSensitive, boolean colNameCaseSensitive) {
+    public Expression newColumnExpression(boolean schemaNameCaseSensitive, boolean colNameCaseSensitive) throws SQLException {
         PTable table = tableRef.getTable();
         PColumn column = this.getColumn();
         String displayName = tableRef.getColumnDisplayName(this, schemaNameCaseSensitive, colNameCaseSensitive);
@@ -108,8 +115,15 @@ public class ColumnRef {
         if (table.getType() == PTableType.PROJECTED || table.getType() == PTableType.SUBQUERY) {
         	return new ProjectedColumnExpression(column, table, displayName);
         }
+
+        Expression expression = new KeyValueColumnExpression(column, displayName);
+
+        if (column.getExpressionStr() != null && table.getExpressionMaintainer().getExpression(column.getPosition()) != null) {
+            Expression defaultValueExpression = table.getExpressionMaintainer().getExpression(column.getPosition());
+            return new DefaultValueExpression(Arrays.asList(expression, defaultValueExpression));
+        }
        
-        return new KeyValueColumnExpression(column, displayName);
+        return expression;
     }
 
     public ColumnRef cloneAtTimestamp(long timestamp) {

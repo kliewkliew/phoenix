@@ -21,14 +21,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Set;
 
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -47,6 +46,7 @@ import org.apache.phoenix.expression.ProjectedColumnExpression;
 import org.apache.phoenix.expression.aggregator.ClientAggregators;
 import org.apache.phoenix.expression.aggregator.ServerAggregators;
 import org.apache.phoenix.expression.function.ArrayIndexFunction;
+import org.apache.phoenix.expression.function.DefaultValueExpression;
 import org.apache.phoenix.expression.function.SingleAggregateFunction;
 import org.apache.phoenix.expression.visitor.ExpressionVisitor;
 import org.apache.phoenix.expression.visitor.ProjectedColumnExpressionVisitor;
@@ -61,6 +61,7 @@ import org.apache.phoenix.parse.FunctionParseNode;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.SelectStatement;
 import org.apache.phoenix.parse.SequenceValueParseNode;
+import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.parse.TableName;
 import org.apache.phoenix.parse.TableWildcardParseNode;
 import org.apache.phoenix.parse.WildcardParseNode;
@@ -170,6 +171,14 @@ public class ProjectionCompiler {
             ImmutableBytesWritable ptr = context.getTempPtr();
             if (IndexUtil.getViewConstantValue(column, ptr)) {
                 expression = LiteralExpression.newConstant(column.getDataType().toObject(ptr), expression.getDataType());
+            }
+            if (!SchemaUtil.isPKColumn(column)) {
+                if (column.getExpressionStr() != null && tableRef.getTable().getExpressionMaintainer().getExpression(column.getPosition()) == null) {
+                    ExpressionCompiler compiler = new ExpressionCompiler(context);
+                    ParseNode defaultExpressionNode = new SQLParser(column.getExpressionStr()).parseExpression();
+                    Expression defaultExpression = defaultExpressionNode.accept(compiler);
+                    tableRef.getTable().getExpressionMaintainer().setExpression(column.getPosition(), defaultExpression);
+                }
             }
             projectedExpressions.add(expression);
             boolean isCaseSensitive = !SchemaUtil.normalizeIdentifier(colName).equals(colName);
