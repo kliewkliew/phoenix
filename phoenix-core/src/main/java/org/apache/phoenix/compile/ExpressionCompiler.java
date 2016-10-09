@@ -408,14 +408,6 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
             addColumn(column);
         }
         Expression expression = ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
-        if (!SchemaUtil.isPKColumn(column)) {
-            if (column.getExpressionStr() != null && tableRef.getTable().getExpressionMaintainer().getExpression(column.getPosition()) == null) {
-                ExpressionCompiler compiler = new ExpressionCompiler(context);
-                ParseNode defaultExpressionNode = new SQLParser(column.getExpressionStr()).parseExpression();
-                Expression defaultExpression = defaultExpressionNode.accept(compiler);
-                tableRef.getTable().getExpressionMaintainer().setExpression(column.getPosition(), defaultExpression);
-            }
-        }
         Expression wrappedExpression = wrapGroupByExpression(expression);
         // If we're in an aggregate expression
         // and we're not in the context of an aggregate function

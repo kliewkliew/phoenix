@@ -147,14 +147,6 @@ public class UpsertCompiler {
             }
         }
         ImmutableBytesPtr ptr = new ImmutableBytesPtr();
-        for (PColumn column : table.getColumns()) {
-            if (column.getExpressionStr() != null && table.getExpressionMaintainer().getExpression(column.getPosition()) == null) {
-                ExpressionCompiler compiler = new ExpressionCompiler(new StatementContext(statement));
-                ParseNode defaultValueParseNode = new SQLParser(column.getExpressionStr()).parseExpression();
-                Expression defaultValueExpression = defaultValueParseNode.accept(compiler);
-                table.getExpressionMaintainer().setExpression(column.getPosition(), defaultValueExpression);
-            }
-        }
         table.newKey(ptr, pkValues);
         if (table.getIndexType() == IndexType.LOCAL && maintainer != null) {
             byte[] rowKey = maintainer.buildDataRowKey(ptr, viewConstants);

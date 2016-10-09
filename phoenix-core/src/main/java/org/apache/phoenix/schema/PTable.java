@@ -21,7 +21,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.phoenix.expression.ExpressionMaintainer;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.index.IndexMaintainer;
 import org.apache.phoenix.jdbc.PhoenixConnection;
@@ -314,7 +313,6 @@ public interface PTable extends PMetaDataEntity {
 
     boolean getIndexMaintainers(ImmutableBytesWritable ptr, PhoenixConnection connection);
     IndexMaintainer getIndexMaintainer(PTable dataTable, PhoenixConnection connection);
-    ExpressionMaintainer getExpressionMaintainer();
     PName getDefaultFamilyName();
 
     boolean isWALDisabled();

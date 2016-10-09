@@ -39,20 +39,19 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.phoenix.compile.ExpressionCompiler;
 import org.apache.phoenix.coprocessor.generated.PTableProtos;
 import org.apache.phoenix.exception.DataExceedsCapacityException;
+import org.apache.phoenix.expression.Determinism;
 import org.apache.phoenix.expression.Expression;
-import org.apache.phoenix.expression.ExpressionMaintainer;
 import org.apache.phoenix.expression.LiteralExpression;
 import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.index.IndexMaintainer;
 import org.apache.phoenix.jdbc.PhoenixConnection;
-import org.apache.phoenix.parse.ParseNode;
-import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.protobuf.ProtobufUtil;
 import org.apache.phoenix.query.QueryConstants;
+import org.apache.phoenix.parse.LiteralParseNode;
+import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.schema.RowKeySchema.RowKeySchemaBuilder;
 import org.apache.phoenix.schema.types.PBinary;
 import org.apache.phoenix.schema.types.PChar;
@@ -117,7 +116,6 @@ public class PTableImpl implements PTable {
     private PName parentTableName;
     private List<PName> physicalNames;
     private boolean isImmutableRows;
-    private ExpressionMaintainer expressionMaintainer;
     private IndexMaintainer indexMaintainer;
     private ImmutableBytesWritable indexMaintainersPtr;
     private PName defaultFamilyName;
@@ -625,9 +623,9 @@ public class PTableImpl implements PTable {
                 if (byteValue == null) {
                     if (column.getExpressionStr() != null) {
                         try {
-                            Expression defaultValueExpression = getExpressionMaintainer().getExpression(column.getPosition());
+                            LiteralParseNode defaultParseNode = new SQLParser(column.getExpressionStr()).parseLiteral();
+                            LiteralExpression defaultLiteral = LiteralExpression.newConstant(defaultParseNode.getValue(), column.getDataType(), column.getMaxLength(), column.getScale(), column.getSortOrder(), Determinism.ALWAYS);
                             ImmutableBytesWritable valuePtr = new ImmutableBytesWritable();
-                            LiteralExpression defaultLiteral = ExpressionUtil.getConstantExpression(defaultValueExpression, valuePtr);
                             defaultLiteral.evaluate(null, valuePtr);
                             byteValue = ByteUtil.copyKeyBytesIfNecessary(valuePtr);
                         } catch (SQLException e) {
@@ -838,10 +836,10 @@ public class PTableImpl implements PTable {
             boolean isNull = type.isNull(byteValue);
             if (isNull && !column.isNullable()) {
                 throw new ConstraintViolationException(name.getString() + "." + column.getName().getString() + " may not be null");
-            } else if (isNull && PTableImpl.this.isImmutableRows()) {
+            } else if (isNull && PTableImpl.this.isImmutableRows() && column.getExpressionStr() == null) { // Need to preserve explicit nulls for immutable tables otherwise default value would be used
                 removeIfPresent(setValues, family, qualifier);
                 removeIfPresent(unsetValues, family, qualifier);
-            } else if (isNull && !getStoreNulls()) {
+            } else if (isNull && !getStoreNulls() && column.getExpressionStr() == null) {
                 removeIfPresent(setValues, family, qualifier);
                 deleteQuietly(unsetValues, kvBuilder, kvBuilder.buildDeleteColumns(keyPtr, column
                             .getFamilyName().getBytesPtr(), column.getName().getBytesPtr(), ts));
@@ -988,14 +986,6 @@ public class PTableImpl implements PTable {
     public PName getParentName() {
         // a view on a table will not have a parent name but will have a physical table name (which is the parent)
         return (type!=PTableType.VIEW || parentName!=null) ? parentName : getPhysicalName();
-    }
-
-    @Override
-    public synchronized ExpressionMaintainer getExpressionMaintainer() {
-        if (expressionMaintainer == null) {
-            expressionMaintainer = new ExpressionMaintainer(allColumns.size());
-        }
-        return expressionMaintainer;
     }
 
     @Override

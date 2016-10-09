@@ -674,39 +674,12 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
     }
 
     @Test
-    public void testCreateTableDefaultExpression() throws Exception {
-        String table = generateUniqueName();
-        String ddl = "CREATE TABLE " + table + " (" +
-                "pk INTEGER PRIMARY KEY, " +
-                "def INTEGER DEFAULT 1 + 9)";
-
-        long ts = nextTimestamp();
-        Properties props = new Properties();
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        conn.createStatement().execute(ddl);
-
-        String dml = "UPSERT INTO " + table + " VALUES (1)";
-        conn.createStatement().execute(dml);
-        conn.commit();
-
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
-        conn = DriverManager.getConnection(getUrl(), props);
-
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM " + table + " WHERE pk = 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.getInt(1));
-        assertEquals(10, rs.getInt(2));
-        assertFalse(rs.next());
-    }
-
-    @Test
     public void testCreateTableTrailingNullOverwritingDefault() throws Exception {
         String table = generateUniqueName();
         String ddl = "CREATE TABLE " + table + " (" +
                 "pk INTEGER PRIMARY KEY, " +
                 "mid INTEGER, " +
-                "def INTEGER DEFAULT 1 + 9)";
+                "def INTEGER DEFAULT 10)";
 
         long ts = nextTimestamp();
         Properties props = new Properties();

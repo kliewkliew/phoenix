@@ -172,14 +172,6 @@ public class ProjectionCompiler {
             if (IndexUtil.getViewConstantValue(column, ptr)) {
                 expression = LiteralExpression.newConstant(column.getDataType().toObject(ptr), expression.getDataType());
             }
-            if (!SchemaUtil.isPKColumn(column)) {
-                if (column.getExpressionStr() != null && tableRef.getTable().getExpressionMaintainer().getExpression(column.getPosition()) == null) {
-                    ExpressionCompiler compiler = new ExpressionCompiler(context);
-                    ParseNode defaultExpressionNode = new SQLParser(column.getExpressionStr()).parseExpression();
-                    Expression defaultExpression = defaultExpressionNode.accept(compiler);
-                    tableRef.getTable().getExpressionMaintainer().setExpression(column.getPosition(), defaultExpression);
-                }
-            }
             projectedExpressions.add(expression);
             boolean isCaseSensitive = !SchemaUtil.normalizeIdentifier(colName).equals(colName);
             projectedColumns.add(new ExpressionProjector(colName, tableRef.getTableAlias() == null ? table.getName().getString() : tableRef.getTableAlias(), expression, isCaseSensitive));

@@ -20,7 +20,6 @@ package org.apache.phoenix.schema;
 import java.util.List;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.phoenix.expression.ExpressionMaintainer;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.index.IndexMaintainer;
 import org.apache.phoenix.jdbc.PhoenixConnection;
@@ -165,9 +164,6 @@ public class DelegateTable implements PTable {
     public boolean isImmutableRows() {
         return delegate.isImmutableRows();
     }
-
-    @Override
-    public ExpressionMaintainer getExpressionMaintainer() { return delegate.getExpressionMaintainer(); }
 
     @Override
     public boolean getIndexMaintainers(ImmutableBytesWritable ptr, PhoenixConnection connection) {

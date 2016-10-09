@@ -1986,9 +1986,6 @@ public class MetaDataClient {
                     }
                     isPK = true;
                 } else {
-                    if (colDef.getExpression() != null) {
-                        storeNulls = true;
-                    }
                     // do not allow setting NOT-NULL constraint on non-primary columns.
                     if (  Boolean.FALSE.equals(colDef.isNull()) &&
                         ( isPK || ( pkConstraint != null && !pkConstraint.contains(colDef.getColumnDefName())))) {

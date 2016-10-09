@@ -19,13 +19,12 @@ package org.apache.phoenix.schema;
 
 import org.apache.http.annotation.Immutable;
 import org.apache.phoenix.compile.ExpressionCompiler;
-import org.apache.phoenix.expression.Expression;
+import org.apache.phoenix.expression.*;
 import org.apache.phoenix.expression.function.DefaultValueExpression;
-import org.apache.phoenix.expression.KeyValueColumnExpression;
-import org.apache.phoenix.expression.ProjectedColumnExpression;
-import org.apache.phoenix.expression.RowKeyColumnExpression;
+import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.SQLParser;
+import org.apache.phoenix.util.ExpressionUtil;
 import org.apache.phoenix.util.SchemaUtil;
 
 import java.sql.SQLException;
@@ -118,9 +117,10 @@ public class ColumnRef {
 
         Expression expression = new KeyValueColumnExpression(column, displayName);
 
-        if (column.getExpressionStr() != null && table.getExpressionMaintainer().getExpression(column.getPosition()) != null) {
-            Expression defaultValueExpression = table.getExpressionMaintainer().getExpression(column.getPosition());
-            return new DefaultValueExpression(Arrays.asList(expression, defaultValueExpression));
+        if (column.getExpressionStr() != null) {
+            LiteralParseNode defaultParseNode = new SQLParser(column.getExpressionStr()).parseLiteral();
+            Expression defaultLiteral = LiteralExpression.newConstant(defaultParseNode.getValue(), column.getDataType(), column.getMaxLength(), column.getScale(), column.getSortOrder(), Determinism.ALWAYS);
+            return new DefaultValueExpression(Arrays.asList(expression, defaultLiteral));
         }
        
         return expression;
