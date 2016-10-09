@@ -106,7 +106,6 @@ public class CreateTableCompiler {
                     throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
                             .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
                 }
-
             }
         }
 

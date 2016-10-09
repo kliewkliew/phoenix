@@ -74,6 +74,7 @@ import org.apache.phoenix.parse.NamedTableNode;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.SelectStatement;
 import org.apache.phoenix.parse.SequenceValueParseNode;
+import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.parse.UpsertStatement;
 import org.apache.phoenix.query.ConnectionQueryServices;
 import org.apache.phoenix.query.QueryServices;
@@ -146,6 +147,14 @@ public class UpsertCompiler {
             }
         }
         ImmutableBytesPtr ptr = new ImmutableBytesPtr();
+        for (PColumn column : table.getColumns()) {
+            if (column.getExpressionStr() != null && table.getExpressionMaintainer().getExpression(column.getPosition()) == null) {
+                ExpressionCompiler compiler = new ExpressionCompiler(new StatementContext(statement));
+                ParseNode defaultValueParseNode = new SQLParser(column.getExpressionStr()).parseExpression();
+                Expression defaultValueExpression = defaultValueParseNode.accept(compiler);
+                table.getExpressionMaintainer().setExpression(column.getPosition(), defaultValueExpression);
+            }
+        }
         table.newKey(ptr, pkValues);
         if (table.getIndexType() == IndexType.LOCAL && maintainer != null) {
             byte[] rowKey = maintainer.buildDataRowKey(ptr, viewConstants);
@@ -695,7 +704,7 @@ public class UpsertCompiler {
                     final Scan scan = context.getScan();
                     scan.setAttribute(BaseScannerRegionObserver.UPSERT_SELECT_TABLE, UngroupedAggregateRegionObserver.serialize(projectedTable));
                     scan.setAttribute(BaseScannerRegionObserver.UPSERT_SELECT_EXPRS, UngroupedAggregateRegionObserver.serialize(projectedExpressions));
-                    
+
                     // Ignore order by - it has no impact
                     final QueryPlan aggPlan = new AggregatePlan(context, select, tableRef, aggProjector, null,null, OrderBy.EMPTY_ORDER_BY, null, GroupBy.EMPTY_GROUP_BY, null);
                     return new MutationPlan() {

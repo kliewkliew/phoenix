@@ -119,10 +119,8 @@ public class ColumnRef {
         Expression expression = new KeyValueColumnExpression(column, displayName);
 
         if (column.getExpressionStr() != null) {
-            ExpressionCompiler compiler = new ExpressionCompiler();
-            ParseNode defaultValueParseNode = new SQLParser(column.getExpressionStr()).parseExpression();
-            Expression defaulValueExpression = defaultValueParseNode.accept(compiler);
-            return new DefaultValueExpression(Arrays.asList(expression, defaulValueExpression));
+            Expression defaultValueExpression = table.getExpressionMaintainer().getExpression(column.getPosition());
+            return new DefaultValueExpression(Arrays.asList(expression, defaultValueExpression));
         }
        
         return expression;

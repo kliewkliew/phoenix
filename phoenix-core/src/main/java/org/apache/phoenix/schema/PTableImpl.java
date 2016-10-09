@@ -43,6 +43,7 @@ import org.apache.phoenix.compile.ExpressionCompiler;
 import org.apache.phoenix.coprocessor.generated.PTableProtos;
 import org.apache.phoenix.exception.DataExceedsCapacityException;
 import org.apache.phoenix.expression.Expression;
+import org.apache.phoenix.expression.ExpressionMaintainer;
 import org.apache.phoenix.expression.LiteralExpression;
 import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
@@ -116,6 +117,7 @@ public class PTableImpl implements PTable {
     private PName parentTableName;
     private List<PName> physicalNames;
     private boolean isImmutableRows;
+    private ExpressionMaintainer expressionMaintainer;
     private IndexMaintainer indexMaintainer;
     private ImmutableBytesWritable indexMaintainersPtr;
     private PName defaultFamilyName;
@@ -623,9 +625,7 @@ public class PTableImpl implements PTable {
                 if (byteValue == null) {
                     if (column.getExpressionStr() != null) {
                         try {
-                            ExpressionCompiler compiler = new ExpressionCompiler();
-                            ParseNode defaultValueParseNode = new SQLParser(column.getExpressionStr()).parseExpression();
-                            Expression defaultValueExpression = defaultValueParseNode.accept(compiler);
+                            Expression defaultValueExpression = getExpressionMaintainer().getExpression(column.getPosition());
                             LiteralExpression defaultLiteral = ExpressionUtil.getConstantExpression(defaultValueExpression, key);
                             ImmutableBytesWritable valuePtr = new ImmutableBytesWritable();
                             defaultLiteral.evaluate(null, valuePtr);
@@ -988,6 +988,14 @@ public class PTableImpl implements PTable {
     public PName getParentName() {
         // a view on a table will not have a parent name but will have a physical table name (which is the parent)
         return (type!=PTableType.VIEW || parentName!=null) ? parentName : getPhysicalName();
+    }
+
+    @Override
+    public synchronized ExpressionMaintainer getExpressionMaintainer() {
+        if (expressionMaintainer == null) {
+            expressionMaintainer = new ExpressionMaintainer(allColumns.size());
+        }
+        return expressionMaintainer;
     }
 
     @Override
