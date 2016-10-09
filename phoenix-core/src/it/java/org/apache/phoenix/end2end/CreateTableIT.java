@@ -729,4 +729,42 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
         assertTrue(rs.wasNull());
         assertFalse(rs.next());
     }
+
+    @Test
+    public void testCreateTableDefaultReinit() throws Exception {
+        String table = generateRandomString();
+        String ddl = "CREATE TABLE IF NOT EXISTS " + table + " (" +
+                "pk INTEGER PRIMARY KEY, " +
+                "test INTEGER DEFAULT 5)";
+
+        long ts = nextTimestamp();
+        Properties props = new Properties();
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
+        Connection conn = DriverManager.getConnection(getUrl(), props);
+        conn.createStatement().execute(ddl);
+
+        String dml = "UPSERT INTO " + table + " VALUES (1)";
+        conn.createStatement().execute(dml);
+        conn.commit();
+
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
+        conn = DriverManager.getConnection(getUrl(), props);
+
+        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM " + table + " WHERE pk = 1");
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertEquals(5, rs.getInt(2));
+        assertFalse(rs.next());
+
+        conn.close();
+
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 50));
+        Connection conn2 = DriverManager.getConnection(getUrl(), props);
+
+        rs = conn2.createStatement().executeQuery("SELECT * FROM " + table + " WHERE pk = 1");
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertEquals(5, rs.getInt(2));
+        assertFalse(rs.next());
+    }
 }
