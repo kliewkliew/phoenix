@@ -1108,16 +1108,17 @@ NAME
 // An integer number, positive or negative
 NUMBER
     :   POSINTEGER
+    |   NEGINTEGER
     ;
 
 DECIMAL
-	:	POSINTEGER? '.' POSINTEGER
+	:	NUMBER? '.' POSINTEGER
 	;
 	
 DOUBLE
     :   '.' POSINTEGER Exponent
-    |   POSINTEGER '.' Exponent
-    |   POSINTEGER ('.' (POSINTEGER (Exponent)?)? | Exponent)
+    |   NUMBER '.' Exponent
+    |   NUMBER ('.' (POSINTEGER (Exponent)?)? | Exponent)
     ;
 
 Exponent
@@ -1247,6 +1248,11 @@ LETTER
 fragment
 POSINTEGER
     :   DIGIT+
+    ;
+
+fragment
+NEGINTEGER
+    :   MINUS DIGIT+
     ;
 
 fragment

@@ -18,10 +18,17 @@
 package org.apache.phoenix.end2end;
 
 import static org.apache.hadoop.hbase.HColumnDescriptor.DEFAULT_REPLICATION_SCOPE;
-import static org.junit.Assert.*;
 
-import java.sql.*;
-import java.util.Arrays;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Properties;
 
@@ -35,10 +42,7 @@ import org.apache.phoenix.query.QueryServices;
 import org.apache.phoenix.schema.NewerTableAlreadyExistsException;
 import org.apache.phoenix.schema.SchemaNotFoundException;
 import org.apache.phoenix.schema.TableAlreadyExistsException;
-import org.apache.phoenix.util.PhoenixRuntime;
-import org.apache.phoenix.util.PropertiesUtil;
-import org.apache.phoenix.util.SchemaUtil;
-import org.apache.phoenix.util.TestUtil;
+import org.apache.phoenix.util.*;
 import org.junit.Test;
 
 
@@ -495,249 +499,5 @@ public class CreateTableIT extends BaseClientManagedTimeIT {
         } catch (SchemaNotFoundException e) {
             fail();
         }
-    }
-
-    @Test
-    public void testCreateTableDefaultColumnValue() throws Exception {
-        String ddl = "CREATE TABLE IF NOT EXISTS T_DEFAULT (" +
-                "pk1 INTEGER NOT NULL, " +
-                "pk2 INTEGER NOT NULL, " +
-                "pk3 INTEGER NOT NULL DEFAULT 10, " +
-                "test1 INTEGER, " +
-                "test2 INTEGER DEFAULT 5, " +
-                "test3 INTEGER, " +
-                "CONSTRAINT NAME_PK PRIMARY KEY (pk1, pk2, pk3))";
-
-        long ts = nextTimestamp();
-        Properties props = new Properties();
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        conn.createStatement().execute(ddl);
-
-        String dml = "UPSERT INTO T_DEFAULT VALUES (1, 2)";
-        conn.createStatement().execute(dml);
-        dml = "UPSERT INTO T_DEFAULT VALUES (11, 12, 13, 14, null, 16)";
-        conn.createStatement().execute(dml);
-        conn.commit();
-
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
-        conn = DriverManager.getConnection(getUrl(), props);
-
-        String projection = "*";
-
-        ResultSet rs = conn.createStatement().executeQuery("SELECT " + projection + " FROM T_DEFAULT WHERE pk1 = 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.getInt(1));
-        assertEquals(2, rs.getInt(2));
-        assertEquals(10, rs.getInt(3));
-        assertEquals(0, rs.getInt(4));
-        assertTrue(rs.wasNull());
-        assertEquals(5, rs.getInt(5));
-        assertEquals(0, rs.getInt(6));
-        assertTrue(rs.wasNull());
-        assertFalse(rs.next());
-
-        rs = conn.createStatement().executeQuery("SELECT " + projection + " FROM T_DEFAULT WHERE pk1 = 11");
-        assertTrue(rs.next());
-        assertEquals(11, rs.getInt(1));
-        assertEquals(12, rs.getInt(2));
-        assertEquals(13, rs.getInt(3));
-        assertEquals(14, rs.getInt(4));
-        assertEquals(0, rs.getInt(5));
-        assertTrue(rs.wasNull());
-        assertEquals(16, rs.getInt(6));
-        assertFalse(rs.next());
-    }
-
-    @Test
-    public void testCreateTableDefaultColumnValueProjected() throws Exception {
-        String ddl = "CREATE TABLE IF NOT EXISTS T_DEFAULT (" +
-                "pk1 INTEGER NOT NULL, " +
-                "pk2 INTEGER NOT NULL, " +
-                "pk3 INTEGER NOT NULL DEFAULT 10, " +
-                "test1 INTEGER, " +
-                "test2 INTEGER DEFAULT 5, " +
-                "test3 INTEGER, " +
-                "CONSTRAINT NAME_PK PRIMARY KEY (pk1, pk2, pk3))";
-
-        long ts = nextTimestamp();
-        Properties props = new Properties();
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        conn.createStatement().execute(ddl);
-
-        String dml = "UPSERT INTO T_DEFAULT VALUES (1, 2)";
-        conn.createStatement().execute(dml);
-        dml = "UPSERT INTO T_DEFAULT VALUES (11, 12, 13, 14, null, 16)";
-        conn.createStatement().execute(dml);
-        conn.commit();
-
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
-        conn = DriverManager.getConnection(getUrl(), props);
-
-        String projection = "pk1, pk2, pk3, test1, test2, test3";
-
-        ResultSet rs = conn.createStatement().executeQuery("SELECT " + projection + " FROM T_DEFAULT WHERE pk1 = 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.getInt(1));
-        assertEquals(2, rs.getInt(2));
-        assertEquals(10, rs.getInt(3));
-        assertEquals(0, rs.getInt(4));
-        assertTrue(rs.wasNull());
-        assertEquals(5, rs.getInt(5));
-        assertEquals(0, rs.getInt(6));
-        assertTrue(rs.wasNull());
-        assertFalse(rs.next());
-
-        rs = conn.createStatement().executeQuery("SELECT " + projection + " FROM T_DEFAULT WHERE pk1 = 11");
-        assertTrue(rs.next());
-        assertEquals(11, rs.getInt(1));
-        assertEquals(12, rs.getInt(2));
-        assertEquals(13, rs.getInt(3));
-        assertEquals(14, rs.getInt(4));
-        assertEquals(0, rs.getInt(5));
-        assertTrue(rs.wasNull());
-        assertEquals(16, rs.getInt(6));
-        assertFalse(rs.next());
-    }
-
-    @Test
-    public void testCreateTableDefaultColumnValueMultipleDefaults() throws Exception {
-        String ddl = "CREATE TABLE IF NOT EXISTS T_DEFAULT2 (" +
-                "pk1 INTEGER NOT NULL, " +
-                "pk2 INTEGER NOT NULL DEFAULT 5, " +
-                "pk3 INTEGER NOT NULL DEFAULT 10, " +
-                "test1 INTEGER, " +
-                "test2 INTEGER DEFAULT 50, " +
-                "test3 INTEGER DEFAULT 100, " +
-                "test4 INTEGER, " +
-                "CONSTRAINT NAME_PK PRIMARY KEY (pk1, pk2, pk3))";
-
-        long ts = nextTimestamp();
-        Properties props = new Properties();
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        conn.createStatement().execute(ddl);
-
-        String dml = "UPSERT INTO T_DEFAULT2 VALUES (1)";
-        conn.createStatement().execute(dml);
-        dml = "UPSERT INTO T_DEFAULT2 VALUES (11, 12, 13, 21, null, null, 24)";
-        conn.createStatement().execute(dml);
-        conn.commit();
-
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
-        conn = DriverManager.getConnection(getUrl(), props);
-
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM T_DEFAULT2 WHERE pk1 = 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.getInt(1));
-        assertEquals(5, rs.getInt(2));
-        assertEquals(10, rs.getInt(3));
-        assertEquals(0, rs.getInt(4));
-        assertTrue(rs.wasNull());
-        assertEquals(50, rs.getInt(5));
-        assertEquals(100, rs.getInt(6));
-        assertEquals(0, rs.getInt(7));
-        assertTrue(rs.wasNull());
-        assertFalse(rs.next());
-
-        rs = conn.createStatement().executeQuery("SELECT * FROM T_DEFAULT2 WHERE pk1 = 11");
-        assertTrue(rs.next());
-        assertEquals(11, rs.getInt(1));
-        assertEquals(12, rs.getInt(2));
-        assertEquals(13, rs.getInt(3));
-        assertEquals(21, rs.getInt(4));
-        assertEquals(0, rs.getInt(5));
-        assertTrue(rs.wasNull());
-        assertEquals(0, rs.getInt(6));
-        assertTrue(rs.wasNull());
-        assertEquals(24, rs.getInt(7));
-        assertFalse(rs.next());
-    }
-
-    @Test
-    public void testCreateTableStatefulDefault() throws Exception {
-        String ddl = "CREATE TABLE IF NOT EXISTS DEFAULT_DATE (" +
-                "pk INTEGER PRIMARY KEY, " +
-                "date DATE DEFAULT CURRENT_DATE)";
-
-        long ts = nextTimestamp();
-        Properties props = new Properties();
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        try {
-            conn.createStatement().execute(ddl);
-            fail();
-        } catch (SQLException e) {
-            // Expected
-        }
-    }
-
-    @Test
-    public void testCreateTableTrailingNullOverwritingDefault() throws Exception {
-        String table = generateUniqueName();
-        String ddl = "CREATE TABLE " + table + " (" +
-                "pk INTEGER PRIMARY KEY, " +
-                "mid INTEGER, " +
-                "def INTEGER DEFAULT 10)";
-
-        long ts = nextTimestamp();
-        Properties props = new Properties();
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        conn.createStatement().execute(ddl);
-
-        String dml = "UPSERT INTO " + table + " VALUES (1, 10, null)";
-        conn.createStatement().execute(dml);
-        conn.commit();
-
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
-        conn = DriverManager.getConnection(getUrl(), props);
-
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM " + table + " WHERE pk = 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.getInt(1));
-        assertEquals(10, rs.getInt(2));
-        assertEquals(0, rs.getInt(3));
-        assertTrue(rs.wasNull());
-        assertFalse(rs.next());
-    }
-
-    @Test
-    public void testCreateTableDefaultReinit() throws Exception {
-        String table = generateUniqueName();
-        String ddl = "CREATE TABLE IF NOT EXISTS " + table + " (" +
-                "pk INTEGER PRIMARY KEY, " +
-                "test INTEGER DEFAULT 5)";
-
-        long ts = nextTimestamp();
-        Properties props = new Properties();
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        conn.createStatement().execute(ddl);
-
-        String dml = "UPSERT INTO " + table + " VALUES (1)";
-        conn.createStatement().execute(dml);
-        conn.commit();
-
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
-        conn = DriverManager.getConnection(getUrl(), props);
-
-        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM " + table + " WHERE pk = 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.getInt(1));
-        assertEquals(5, rs.getInt(2));
-        assertFalse(rs.next());
-
-        conn.close();
-
-        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 50));
-        Connection conn2 = DriverManager.getConnection(getUrl(), props);
-
-        rs = conn2.createStatement().executeQuery("SELECT * FROM " + table + " WHERE pk = 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.getInt(1));
-        assertEquals(5, rs.getInt(2));
-        assertFalse(rs.next());
     }
 }

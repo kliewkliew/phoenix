@@ -45,6 +45,7 @@ import org.apache.phoenix.parse.BindParseNode;
 import org.apache.phoenix.parse.ColumnDef;
 import org.apache.phoenix.parse.ColumnParseNode;
 import org.apache.phoenix.parse.CreateTableStatement;
+import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.parse.SelectStatement;
@@ -100,11 +101,16 @@ public class CreateTableCompiler {
             }
             if (columnDef.getExpression() != null) {
                 ExpressionCompiler compiler = new ExpressionCompiler(context);
-                ParseNode defaulValueParseNode = new SQLParser(columnDef.getExpression()).parseExpression();
-                Expression defaultExpression = defaulValueParseNode.accept(compiler);
-                if (!defaulValueParseNode.isStateless() || defaultExpression.getDeterminism() != Determinism.ALWAYS) {
+                ParseNode defaultParseNode = new SQLParser(columnDef.getExpression()).parseExpression();
+                Expression defaultExpression = defaultParseNode.accept(compiler);
+                if (!defaultParseNode.isStateless() || defaultExpression.getDeterminism() != Determinism.ALWAYS) {
                     throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_STATEFUL_DEFAULT)
                             .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
+                }
+                else {
+                    // Test the default value once and throw exception if the default is not suitable (ie. out of range for data type)
+                    LiteralParseNode defaultLiteralParseNode = new SQLParser(columnDef.getExpression()).parseLiteral();
+                    LiteralExpression.newConstant(defaultLiteralParseNode.getValue(), columnDef.getDataType(), columnDef.getMaxLength(), columnDef.getScale(), columnDef.getSortOrder(), Determinism.ALWAYS);
                 }
             }
         }

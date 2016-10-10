@@ -118,7 +118,7 @@ public enum SQLExceptionCode {
         }
     }),
     INDEX_MISSING_PK_COLUMNS(503, "42602", "Index table missing PK Columns."),
-     COLUMN_NOT_FOUND(504, "42703", "Undefined column.", new Factory() {
+    COLUMN_NOT_FOUND(504, "42703", "Undefined column.", new Factory() {
         @Override
         public SQLException newException(SQLExceptionInfo info) {
             return new ColumnNotFoundException(info.getSchemaName(), info.getTableName(), info.getFamilyName(), info.getColumnName());
