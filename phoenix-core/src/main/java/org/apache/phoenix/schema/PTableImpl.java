@@ -39,14 +39,22 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.phoenix.compile.ExpressionCompiler;
+import org.apache.phoenix.compile.StatementContext;
 import org.apache.phoenix.coprocessor.generated.PTableProtos;
 import org.apache.phoenix.exception.DataExceedsCapacityException;
+import org.apache.phoenix.expression.Determinism;
+import org.apache.phoenix.expression.Expression;
+import org.apache.phoenix.expression.LiteralExpression;
 import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.index.IndexMaintainer;
 import org.apache.phoenix.jdbc.PhoenixConnection;
+import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.protobuf.ProtobufUtil;
 import org.apache.phoenix.query.QueryConstants;
+import org.apache.phoenix.parse.LiteralParseNode;
+import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.schema.RowKeySchema.RowKeySchemaBuilder;
 import org.apache.phoenix.schema.types.PBinary;
 import org.apache.phoenix.schema.types.PChar;
@@ -55,6 +63,7 @@ import org.apache.phoenix.schema.types.PDouble;
 import org.apache.phoenix.schema.types.PFloat;
 import org.apache.phoenix.schema.types.PVarchar;
 import org.apache.phoenix.util.ByteUtil;
+import org.apache.phoenix.util.ExpressionUtil;
 import org.apache.phoenix.util.SchemaUtil;
 import org.apache.phoenix.util.SizedUtil;
 import org.apache.phoenix.util.StringUtil;
@@ -582,10 +591,16 @@ public class PTableImpl implements PTable {
     }
 
     @Override
-    public int newKey(ImmutableBytesWritable key, byte[][] values) {
+    public int newKey(StatementContext context, ImmutableBytesWritable key, byte[][] values) {
+        List<PColumn> columns = getPKColumns();
         int nValues = values.length;
         while (nValues > 0 && (values[nValues-1] == null || values[nValues-1].length == 0)) {
             nValues--;
+        }
+        for (PColumn column : columns) {
+            if (column.getExpressionStr() != null) {
+                nValues++;
+            }
         }
         int i = 0;
         TrustedByteArrayOutputStream os = new TrustedByteArrayOutputStream(SchemaUtil.estimateKeyLength(this));
@@ -596,7 +611,6 @@ public class PTableImpl implements PTable {
                 i++;
                 os.write(QueryConstants.SEPARATOR_BYTE_ARRAY);
             }
-            List<PColumn> columns = getPKColumns();
             int nColumns = columns.size();
             PDataType type = null;
             SortOrder sortOrder = null;
@@ -612,7 +626,24 @@ public class PTableImpl implements PTable {
                 // This will throw if the value is null and the type doesn't allow null
                 byte[] byteValue = values[i++];
                 if (byteValue == null) {
-                    byteValue = ByteUtil.EMPTY_BYTE_ARRAY;
+                    if (column.getExpressionStr() != null) {
+                        try {
+                            ExpressionCompiler compiler = new ExpressionCompiler(context);
+                            ParseNode defaultParseNode = new SQLParser(column.getExpressionStr()).parseExpression();
+                            Expression defaultExpression = defaultParseNode.accept(compiler);
+                            ImmutableBytesWritable valuePtr = new ImmutableBytesWritable();
+                            defaultExpression.evaluate(null, valuePtr);
+                            column.getDataType().coerceBytes(valuePtr, null, defaultExpression.getDataType(),
+                                    defaultExpression.getMaxLength(), defaultExpression.getScale(), defaultExpression.getSortOrder(),
+                                    column.getMaxLength(), column.getScale(), column.getSortOrder());
+                            byteValue = ByteUtil.copyKeyBytesIfNecessary(valuePtr);
+                        } catch (SQLException e) {
+                            throw new ConstraintViolationException(name.getString() + "." + column.getName().getString() + " may not be null");
+                        }
+                    }
+                    else {
+                        byteValue = ByteUtil.EMPTY_BYTE_ARRAY;
+                    }
                 }
                 wasNull = byteValue.length == 0;
                 // An empty byte array return value means null. Do this,
@@ -814,10 +845,10 @@ public class PTableImpl implements PTable {
             boolean isNull = type.isNull(byteValue);
             if (isNull && !column.isNullable()) {
                 throw new ConstraintViolationException(name.getString() + "." + column.getName().getString() + " may not be null");
-            } else if (isNull && PTableImpl.this.isImmutableRows()) {
+            } else if (isNull && PTableImpl.this.isImmutableRows() && column.getExpressionStr() == null) { // Need to preserve explicit nulls for immutable tables otherwise default value would be used
                 removeIfPresent(setValues, family, qualifier);
                 removeIfPresent(unsetValues, family, qualifier);
-            } else if (isNull && !getStoreNulls()) {
+            } else if (isNull && !getStoreNulls() && column.getExpressionStr() == null) {
                 removeIfPresent(setValues, family, qualifier);
                 deleteQuietly(unsetValues, kvBuilder, kvBuilder.buildDeleteColumns(keyPtr, column
                             .getFamilyName().getBytesPtr(), column.getName().getBytesPtr(), ts));

@@ -435,7 +435,7 @@ public class UngroupedAggregateRegionObserver extends BaseScannerRegionObserver 
                                     }
                                     values[i] = ptr.copyBytes();
                                 }
-                                writeToTable.newKey(ptr, values);
+                                writeToTable.newKey(null, ptr, values);
                                 if (Bytes.compareTo(
                                     firstKV.getRowArray(), firstKV.getRowOffset() + offset, firstKV.getRowLength(), 
                                     ptr.get(),ptr.getOffset() + offset,ptr.getLength()) == 0) {
@@ -524,7 +524,7 @@ public class UngroupedAggregateRegionObserver extends BaseScannerRegionObserver 
                                         }
                                     }
                                 }
-                                projectedTable.newKey(ptr, values);
+                                projectedTable.newKey(null, ptr, values);
                                 PRow row = projectedTable.newRow(kvBuilder, ts, ptr);
                                 for (; i < projectedColumns.size(); i++) {
                                     Expression expression = selectExpressions.get(i);

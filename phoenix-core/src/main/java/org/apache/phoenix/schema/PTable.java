@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.phoenix.compile.StatementContext;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.index.IndexMaintainer;
 import org.apache.phoenix.jdbc.PhoenixConnection;
@@ -250,12 +251,13 @@ public interface PTable extends PMetaDataEntity {
     /**
      * Formulates a row key using the values provided. The values must be in
      * the same order as {@link #getPKColumns()}.
+     * @param context the context for compiling default value expressions
      * @param key bytes pointer that will be filled in with the row key
      * @param values the PK column values
      * @return the number of values that were used from values to set
      * the row key
      */
-    int newKey(ImmutableBytesWritable key, byte[][] values);
+    int newKey(StatementContext context, ImmutableBytesWritable key, byte[][] values);
 
     RowKeySchema getRowKeySchema();
 

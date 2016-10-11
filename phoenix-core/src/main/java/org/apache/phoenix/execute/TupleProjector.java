@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.phoenix.compile.ColumnProjector;
 import org.apache.phoenix.compile.RowProjector;
+import org.apache.phoenix.compile.StatementContext;
 import org.apache.phoenix.expression.Expression;
 import org.apache.phoenix.expression.ExpressionType;
 import org.apache.phoenix.schema.KeyValueSchema;
@@ -83,8 +85,12 @@ public class TupleProjector {
         schema = builder.build();
         valueSet = ValueBitSet.newInstance(schema);
     }
-    
-    public TupleProjector(PTable projectedTable) {
+
+    public TupleProjector(PTable projectedTable) throws SQLException {
+        this(null, projectedTable);
+    }
+
+    public TupleProjector(StatementContext context, PTable projectedTable) throws SQLException {
         Preconditions.checkArgument(projectedTable.getType() == PTableType.PROJECTED);
     	List<PColumn> columns = projectedTable.getColumns();
     	this.expressions = new Expression[columns.size() - projectedTable.getPKColumns().size()];
@@ -93,7 +99,7 @@ public class TupleProjector {
         for (PColumn column : columns) {
         	if (!SchemaUtil.isPKColumn(column)) {
         		builder.addField(column);
-        		expressions[i++] = ((ProjectedColumn) column).getSourceColumnRef().newColumnExpression();
+        		expressions[i++] = ((ProjectedColumn) column).getSourceColumnRef().newColumnExpression(context);
         	}
         }
         schema = builder.build();

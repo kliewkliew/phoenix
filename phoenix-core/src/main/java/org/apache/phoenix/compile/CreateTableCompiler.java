@@ -45,6 +45,7 @@ import org.apache.phoenix.parse.BindParseNode;
 import org.apache.phoenix.parse.ColumnDef;
 import org.apache.phoenix.parse.ColumnParseNode;
 import org.apache.phoenix.parse.CreateTableStatement;
+import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.parse.ParseNode;
 import org.apache.phoenix.parse.SQLParser;
 import org.apache.phoenix.parse.SelectStatement;
@@ -59,9 +60,11 @@ import org.apache.phoenix.schema.PTable.ViewType;
 import org.apache.phoenix.schema.PTableType;
 import org.apache.phoenix.schema.SortOrder;
 import org.apache.phoenix.schema.TableRef;
+import org.apache.phoenix.schema.tuple.ResultTuple;
 import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.schema.types.PVarbinary;
 import org.apache.phoenix.util.ByteUtil;
+import org.apache.phoenix.util.ExpressionUtil;
 import org.apache.phoenix.util.QueryUtil;
 
 import com.google.common.collect.Iterators;
@@ -94,9 +97,19 @@ public class CreateTableCompiler {
         // Check whether column families having local index column family suffix or not if present
         // don't allow creating table.
         for(ColumnDef columnDef: create.getColumnDefs()) {
-            if(columnDef.getColumnDefName().getFamilyName()!=null && columnDef.getColumnDefName().getFamilyName().contains(QueryConstants.LOCAL_INDEX_COLUMN_FAMILY_PREFIX)) {
+            if (columnDef.getColumnDefName().getFamilyName() != null && columnDef.getColumnDefName().getFamilyName().contains(QueryConstants.LOCAL_INDEX_COLUMN_FAMILY_PREFIX)) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.UNALLOWED_COLUMN_FAMILY)
-                .build().buildException();
+                        .build().buildException();
+            }
+            if (columnDef.getExpression() != null) {
+                ExpressionCompiler compiler = new ExpressionCompiler(context);
+                ParseNode defaultParseNode = new SQLParser(columnDef.getExpression()).parseExpression();
+                Expression defaultExpression = defaultParseNode.accept(compiler);
+                if (!defaultParseNode.isStateless() || defaultExpression.getDeterminism() != Determinism.ALWAYS
+                        || columnDef.isArray()) {
+                    throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_DEFAULT)
+                            .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
+                }
             }
         }
 

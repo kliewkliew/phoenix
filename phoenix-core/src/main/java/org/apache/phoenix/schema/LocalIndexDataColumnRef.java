@@ -58,7 +58,7 @@ public class LocalIndexDataColumnRef extends ColumnRef {
     }
 
     @Override
-    public ColumnExpression newColumnExpression(boolean schemaNameCaseSensitive, boolean colNameCaseSensitive) {
+    public ColumnExpression newColumnExpression(StatementContext context, boolean schemaNameCaseSensitive, boolean colNameCaseSensitive) {
         String displayName = this.getTableRef().getColumnDisplayName(this, schemaNameCaseSensitive, colNameCaseSensitive);
         return new ProjectedColumnExpression(this.getColumn(), columns, position, displayName);
     }

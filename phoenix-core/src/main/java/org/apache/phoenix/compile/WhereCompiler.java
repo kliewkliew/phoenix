@@ -173,7 +173,7 @@ public class WhereCompiler {
                 context.addWhereCoditionColumn(ref.getColumn().getFamilyName().getBytes(), ref.getColumn().getName()
                         .getBytes());
             }
-            return ref.newColumnExpression(node.isTableNameCaseSensitive(), node.isCaseSensitive());
+            return ref.newColumnExpression(context, node.isTableNameCaseSensitive(), node.isCaseSensitive());
         }
 
         @Override

@@ -124,7 +124,7 @@ public class IndexTestUtil {
         PRow row;
         long ts = MetaDataUtil.getClientTimeStamp(dataMutation);
         if (dataMutation instanceof Delete && dataMutation.getFamilyCellMap().values().isEmpty()) {
-            indexTable.newKey(ptr, indexValues);
+            indexTable.newKey(null, ptr, indexValues);
             row = indexTable.newRow(builder, ts, ptr);
             row.delete();
         } else {
@@ -152,7 +152,7 @@ public class IndexTestUtil {
                     }
                 }
             }
-            indexTable.newKey(ptr, indexValues);
+            indexTable.newKey(null, ptr, indexValues);
             row = indexTable.newRow(builder, ts, ptr);
             int pos = 0;
             while ((pos = indexValuesSet.nextSetBit(pos)) >= 0) {

@@ -155,7 +155,7 @@ public class DeleteCompiler {
                         }
                         values[i] = byteValue;
                     }
-                    table.newKey(ptr, values);
+                    table.newKey(childContext, ptr, values);
                 }
                 // When issuing deletes, we do not care about the row time ranges. Also, if the table had a row timestamp column, then the
                 // row key will already have its value. 
