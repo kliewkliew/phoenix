@@ -634,6 +634,62 @@ public class DefaultColumnValueIT extends BaseClientManagedTimeIT {
     }
 
     @Test
+    public void testDefaultUpsertSelectPrimaryKey() throws Exception {
+        long ts = nextTimestamp();
+        Properties props = new Properties();
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
+        Connection conn = DriverManager.getConnection(getUrl(), props);
+        String selectTable = generateUniqueName();
+        String ddl = "CREATE TABLE IF NOT EXISTS " + selectTable + " ("
+                + "pk INTEGER PRIMARY KEY)";
+        conn.createStatement().execute(ddl);
+
+        String table = generateUniqueName();
+        ddl = "CREATE TABLE IF NOT EXISTS " + table + " ("
+                + "pk1 INTEGER NOT NULL, "
+                + "pk2 INTEGER NOT NULL DEFAULT 100,"
+                + "CONSTRAINT pk_key PRIMARY KEY(pk1, pk2))";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+
+        String dml = "UPSERT INTO " + selectTable + " VALUES (1)";
+        conn.createStatement().execute(dml);
+        dml = "UPSERT INTO " + selectTable + " VALUES (2)";
+        conn.createStatement().execute(dml);
+        conn.commit();
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 10));
+        conn = DriverManager.getConnection(getUrl(), props);
+        dml = "UPSERT INTO " + table + " (pk1) SELECT pk FROM " + selectTable;
+        conn.createStatement().executeUpdate(dml);
+        dml = "UPSERT INTO " + table + " SELECT pk,pk FROM " + selectTable;
+        conn.createStatement().executeUpdate(dml);
+        conn.commit();
+
+        props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts + 20));
+        conn = DriverManager.getConnection(getUrl(), props);
+
+        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM " + selectTable);
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertTrue(rs.next());
+        assertEquals(2, rs.getInt(1));
+
+        rs =conn.createStatement().executeQuery("SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertEquals(1, rs.getInt(2));
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertEquals(100, rs.getInt(2));
+        assertTrue(rs.next());
+        assertEquals(2, rs.getInt(1));
+        assertEquals(2, rs.getInt(2));
+        assertTrue(rs.next());
+        assertEquals(2, rs.getInt(1));
+        assertEquals(100, rs.getInt(2));
+    }
+
+    @Test
     public void testDefaultArrays() throws Exception {
         String table = generateUniqueName();
         String ddl = "CREATE TABLE IF NOT EXISTS " + table + "("
