@@ -575,7 +575,7 @@ public class QueryCompiler {
         }
 
         if (projectedTable != null) {
-            TupleProjector.serializeProjectorIntoScan(context.getScan(), new TupleProjector(context, projectedTable));
+            TupleProjector.serializeProjectorIntoScan(context.getScan(), new TupleProjector(projectedTable));
         }
         
         QueryPlan plan = innerPlan;

@@ -591,7 +591,7 @@ public class PTableImpl implements PTable {
     }
 
     @Override
-    public int newKey(StatementContext context, ImmutableBytesWritable key, byte[][] values) {
+    public int newKey(ImmutableBytesWritable key, byte[][] values) {
         List<PColumn> columns = getPKColumns();
         int nValues = values.length;
         while (nValues > 0 && (values[nValues-1] == null || values[nValues-1].length == 0)) {
@@ -628,9 +628,8 @@ public class PTableImpl implements PTable {
                 if (byteValue == null) {
                     if (column.getExpressionStr() != null) {
                         try {
-                            ExpressionCompiler compiler = new ExpressionCompiler(context);
-                            ParseNode defaultParseNode = new SQLParser(column.getExpressionStr()).parseExpression();
-                            Expression defaultExpression = defaultParseNode.accept(compiler);
+                            LiteralParseNode defaultParseNode = new SQLParser(column.getExpressionStr()).parseLiteral();
+                            Expression defaultExpression = LiteralExpression.newConstant(defaultParseNode.getValue(), column.getDataType(), column.getMaxLength(), column.getScale(), column.getSortOrder(), Determinism.ALWAYS);
                             ImmutableBytesWritable valuePtr = new ImmutableBytesWritable();
                             defaultExpression.evaluate(null, valuePtr);
                             column.getDataType().coerceBytes(valuePtr, null, defaultExpression.getDataType(),
@@ -638,7 +637,7 @@ public class PTableImpl implements PTable {
                                     column.getMaxLength(), column.getScale(), column.getSortOrder());
                             byteValue = ByteUtil.copyKeyBytesIfNecessary(valuePtr);
                         } catch (SQLException e) {
-                            throw new ConstraintViolationException(name.getString() + "." + column.getName().getString() + " may not be null");
+                            throw new ConstraintViolationException(name.getString() + "." + column.getName().getString() + " failed to compile default value expression of " + column.getExpressionStr());
                         }
                     }
                     else {

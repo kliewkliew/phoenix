@@ -533,7 +533,6 @@ public class DefaultColumnValueIT extends BaseClientManagedTimeIT {
     }
 
     private void testDefaultMostDataTypes(String table, String ddl) throws SQLException {
-
         long ts = nextTimestamp();
         Properties props = new Properties();
         props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));

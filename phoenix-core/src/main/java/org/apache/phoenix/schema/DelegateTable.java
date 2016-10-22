@@ -117,8 +117,8 @@ public class DelegateTable implements PTable {
     }
 
     @Override
-    public int newKey(StatementContext context, ImmutableBytesWritable key, byte[][] values) {
-        return delegate.newKey(context, key, values);
+    public int newKey(ImmutableBytesWritable key, byte[][] values) {
+        return delegate.newKey(key, values);
     }
 
     @Override

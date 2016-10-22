@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -80,23 +81,25 @@ public class CreateTableCompiler {
         this.operation = operation;
     }
 
-    public MutationPlan compile(final CreateTableStatement create) throws SQLException {
+    public MutationPlan compile(final CreateTableStatement createIn) throws SQLException {
         final PhoenixConnection connection = statement.getConnection();
-        ColumnResolver resolver = FromCompiler.getResolverForCreation(create, connection);
-        PTableType type = create.getTableType();
+        ColumnResolver resolver = FromCompiler.getResolverForCreation(createIn, connection);
+        PTableType type = createIn.getTableType();
         PhoenixConnection connectionToBe = connection;
         PTable parentToBe = null;
         ViewType viewTypeToBe = null;
         Scan scan = new Scan();
         final StatementContext context = new StatementContext(statement, resolver, scan, new SequenceManager(statement));
         // TODO: support any statement for a VIEW instead of just a WHERE clause
-        ParseNode whereNode = create.getWhereClause();
+        ParseNode whereNode = createIn.getWhereClause();
         String viewStatementToBe = null;
         byte[][] viewColumnConstantsToBe = null;
         BitSet isViewColumnReferencedToBe = null;
         // Check whether column families having local index column family suffix or not if present
         // don't allow creating table.
-        for(ColumnDef columnDef: create.getColumnDefs()) {
+        // Also compile default values expressions to literals.
+        List<Expression> defaultExpressions = Lists.newArrayListWithExpectedSize(createIn.getColumnDefs().size());
+        for(ColumnDef columnDef: createIn.getColumnDefs()) {
             if (columnDef.getColumnDefName().getFamilyName() != null && columnDef.getColumnDefName().getFamilyName().contains(QueryConstants.LOCAL_INDEX_COLUMN_FAMILY_PREFIX)) {
                 throw new SQLExceptionInfo.Builder(SQLExceptionCode.UNALLOWED_COLUMN_FAMILY)
                         .build().buildException();
@@ -110,8 +113,14 @@ public class CreateTableCompiler {
                     throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_CREATE_DEFAULT)
                             .setColumnName(columnDef.getColumnDefName().getColumnName()).build().buildException();
                 }
+                defaultExpressions.add(defaultExpression);
+            }
+            else {
+                defaultExpressions.add(null);
             }
         }
+        // Recreate statement with default expressions as literal values
+        final CreateTableStatement create = new CreateTableStatement(createIn, defaultExpressions);
 
         if (type == PTableType.VIEW) {
             TableRef tableRef = resolver.getTables().get(0);

@@ -251,13 +251,12 @@ public interface PTable extends PMetaDataEntity {
     /**
      * Formulates a row key using the values provided. The values must be in
      * the same order as {@link #getPKColumns()}.
-     * @param context the context for compiling default value expressions
      * @param key bytes pointer that will be filled in with the row key
      * @param values the PK column values
      * @return the number of values that were used from values to set
      * the row key
      */
-    int newKey(StatementContext context, ImmutableBytesWritable key, byte[][] values);
+    int newKey(ImmutableBytesWritable key, byte[][] values);
 
     RowKeySchema getRowKeySchema();
 

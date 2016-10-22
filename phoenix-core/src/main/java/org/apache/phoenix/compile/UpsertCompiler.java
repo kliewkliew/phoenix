@@ -114,7 +114,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class UpsertCompiler {
-    private static void setValues(StatementContext context, byte[][] values, int[] pkSlotIndex, int[] columnIndexes,
+    private static void setValues(byte[][] values, int[] pkSlotIndex, int[] columnIndexes,
             PTable table, Map<ImmutableBytesPtr, RowMutationState> mutation,
             PhoenixStatement statement, boolean useServerTimestamp, IndexMaintainer maintainer,
             byte[][] viewConstants) throws SQLException {
@@ -147,7 +147,7 @@ public class UpsertCompiler {
             }
         }
         ImmutableBytesPtr ptr = new ImmutableBytesPtr();
-        table.newKey(context, ptr, pkValues);
+        table.newKey(ptr, pkValues);
         if (table.getIndexType() == IndexType.LOCAL && maintainer != null) {
             byte[] rowKey = maintainer.buildDataRowKey(ptr, viewConstants);
             HRegionLocation region =
@@ -215,7 +215,7 @@ public class UpsertCompiler {
                             table.rowKeyOrderOptimizable());
                     values[i] = ByteUtil.copyKeyBytesIfNecessary(ptr);
                 }
-                setValues(childContext, values, pkSlotIndexes, columnIndexes, table, mutation, statement, useServerTimestamp, indexMaintainer, viewConstants);
+                setValues(values, pkSlotIndexes, columnIndexes, table, mutation, statement, useServerTimestamp, indexMaintainer, viewConstants);
                 rowCount++;
                 // Commit a batch if auto commit is true and we're at our batch size
                 if (isAutoCommit && rowCount % batchSize == 0) {
@@ -970,7 +970,7 @@ public class UpsertCompiler {
                     indexMaintainer = table.getIndexMaintainer(parentTable, connection);
                     viewConstants = IndexUtil.getViewConstants(parentTable);
                 }
-                setValues(context, values, pkSlotIndexes, columnIndexes, table, mutation, statement, useServerTimestamp, indexMaintainer, viewConstants);
+                setValues(values, pkSlotIndexes, columnIndexes, table, mutation, statement, useServerTimestamp, indexMaintainer, viewConstants);
                 return new MutationState(tableRef, mutation, 0, maxSize, connection);
             }
 

@@ -21,10 +21,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.http.annotation.Immutable;
 import org.apache.phoenix.compile.ExpressionCompiler;
 import org.apache.phoenix.compile.StatementContext;
-import org.apache.phoenix.expression.Expression;
-import org.apache.phoenix.expression.KeyValueColumnExpression;
-import org.apache.phoenix.expression.ProjectedColumnExpression;
-import org.apache.phoenix.expression.RowKeyColumnExpression;
+import org.apache.phoenix.expression.*;
 import org.apache.phoenix.expression.function.DefaultValueExpression;
 import org.apache.phoenix.parse.LiteralParseNode;
 import org.apache.phoenix.parse.ParseNode;
@@ -100,16 +97,12 @@ public class ColumnRef {
         if (!tableRef.equals(other.tableRef)) return false;
         return true;
     }
-    
+
     public Expression newColumnExpression() throws SQLException {
-        return newColumnExpression(null, false, false);
+        return newColumnExpression(false, false);
     }
 
-    public Expression newColumnExpression(StatementContext context) throws SQLException {
-        return newColumnExpression(context, false, false);
-    }
-
-    public Expression newColumnExpression(StatementContext context, boolean schemaNameCaseSensitive, boolean colNameCaseSensitive) throws SQLException {
+    public Expression newColumnExpression(boolean schemaNameCaseSensitive, boolean colNameCaseSensitive) throws SQLException {
         PTable table = tableRef.getTable();
         PColumn column = this.getColumn();
         String displayName = tableRef.getColumnDisplayName(this, schemaNameCaseSensitive, colNameCaseSensitive);
@@ -127,9 +120,8 @@ public class ColumnRef {
         Expression expression = new KeyValueColumnExpression(column, displayName);
 
         if (column.getExpressionStr() != null) {
-            ExpressionCompiler compiler = new ExpressionCompiler(context);
-            ParseNode defaultParseNode = new SQLParser(column.getExpressionStr()).parseExpression();
-            Expression defaultExpression = defaultParseNode.accept(compiler);
+            LiteralParseNode defaultParseNode = new SQLParser(column.getExpressionStr()).parseLiteral();
+            Expression defaultExpression = LiteralExpression.newConstant(defaultParseNode.getValue(), column.getDataType(), column.getMaxLength(), column.getScale(), column.getSortOrder(), Determinism.ALWAYS);
             if (!ExpressionUtil.isNull(defaultExpression, new ImmutableBytesWritable())) {
                 return new DefaultValueExpression(Arrays.asList(expression, defaultExpression));
             }

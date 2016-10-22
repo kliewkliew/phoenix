@@ -87,10 +87,6 @@ public class TupleProjector {
     }
 
     public TupleProjector(PTable projectedTable) throws SQLException {
-        this(null, projectedTable);
-    }
-
-    public TupleProjector(StatementContext context, PTable projectedTable) throws SQLException {
         Preconditions.checkArgument(projectedTable.getType() == PTableType.PROJECTED);
     	List<PColumn> columns = projectedTable.getColumns();
     	this.expressions = new Expression[columns.size() - projectedTable.getPKColumns().size()];
@@ -99,7 +95,7 @@ public class TupleProjector {
         for (PColumn column : columns) {
         	if (!SchemaUtil.isPKColumn(column)) {
         		builder.addField(column);
-        		expressions[i++] = ((ProjectedColumn) column).getSourceColumnRef().newColumnExpression(context);
+        		expressions[i++] = ((ProjectedColumn) column).getSourceColumnRef().newColumnExpression();
         	}
         }
         schema = builder.build();

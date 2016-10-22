@@ -18,9 +18,12 @@
 package org.apache.phoenix.parse;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.phoenix.expression.Expression;
 import org.apache.phoenix.jdbc.PhoenixDatabaseMetaData;
 import org.apache.phoenix.schema.PTableType;
 
@@ -53,6 +56,34 @@ public class CreateTableStatement extends MutableStatement {
         this.ifNotExists = ifNotExists;
         this.baseTableName = baseTableName;
         this.whereClause = whereClause;
+    }
+
+    public CreateTableStatement(CreateTableStatement create, List<Expression> defaultExpression) {
+        assert create.getColumnDefs().size() == defaultExpression.size();
+        this.tableName = create.getTableName();
+        this.props = create.getProps();
+        this.tableType = create.getTableType();
+        this.pkConstraint = create.getPrimaryKeyConstraint();
+        this.splitNodes = create.getSplitNodes();
+        this.bindCount = create.getBindCount();
+        this.ifNotExists = create.ifNotExists();
+        this.baseTableName = create.getBaseTableName();
+        this.whereClause = create.getWhereClause();
+
+        this.columns = Lists.newArrayListWithExpectedSize(create.getColumnDefs().size());
+        Iterator<ColumnDef> columnDefIterator = create.getColumnDefs().iterator();
+        for (Expression expression : defaultExpression) {
+            ColumnDef oldCol = columnDefIterator.next();
+            if (null != expression) {
+                // After compiling a default value expression, calling `toString` will return the Literal value
+                this.columns.add(new ColumnDef(oldCol.getColumnDefName(), oldCol.getDataType().getSqlTypeName(), oldCol.isArray(), oldCol.getArraySize(), oldCol.isNullSet() ? oldCol.isNull() : null, oldCol.getMaxLength(), oldCol.getScale(), oldCol.isPK(), oldCol.getSortOrder(),
+                        expression.toString(), oldCol.isRowTimestamp()));
+            }
+            else {
+                this.columns.add(new ColumnDef(oldCol.getColumnDefName(), oldCol.getDataType().getSqlTypeName(), oldCol.isArray(), oldCol.getArraySize(), oldCol.isNullSet() ? oldCol.isNull() : null, oldCol.getMaxLength(), oldCol.getScale(), oldCol.isPK(), oldCol.getSortOrder(),
+                        oldCol.getExpression(), oldCol.isRowTimestamp()));
+            }
+        }
     }
     
     public ParseNode getWhereClause() {
