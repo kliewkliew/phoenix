@@ -905,7 +905,7 @@ multiply_divide_modulo_expression returns [ParseNode ret]
     ;
 
 use_schema_node returns [UseSchemaStatement ret]
-	:   USE s=identifier
+	:   USE (DEFAULT | s=identifier)
         {ret = factory.useSchema(s); }
     ;
 

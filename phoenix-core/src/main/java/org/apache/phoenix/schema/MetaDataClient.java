@@ -3652,8 +3652,7 @@ public class MetaDataClient {
 
     public MutationState useSchema(UseSchemaStatement useSchemaStatement) throws SQLException {
         // As we allow default namespace mapped to empty schema, so this is to reset schema in connection
-        if (useSchemaStatement.getSchemaName().equals(StringUtil.EMPTY_STRING)
-                || useSchemaStatement.getSchemaName().toUpperCase().equals(SchemaUtil.SCHEMA_FOR_DEFAULT_NAMESPACE)) {
+        if (useSchemaStatement.getSchemaName().equals(StringUtil.EMPTY_STRING)) {
             connection.setSchema(null);
         } else {
             FromCompiler.getResolverForSchema(useSchemaStatement, connection)
