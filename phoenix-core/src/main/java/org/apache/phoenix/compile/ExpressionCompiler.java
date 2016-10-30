@@ -57,16 +57,10 @@ import org.apache.phoenix.expression.LikeExpression;
 import org.apache.phoenix.expression.LiteralExpression;
 import org.apache.phoenix.expression.LongAddExpression;
 import org.apache.phoenix.expression.LongDivideExpression;
+import org.apache.phoenix.expression.LongModulusExpression;
 import org.apache.phoenix.expression.LongMultiplyExpression;
 import org.apache.phoenix.expression.LongSubtractExpression;
-import org.apache.phoenix.expression.NotExpression;
-import org.apache.phoenix.expression.OrExpression;
-import org.apache.phoenix.expression.RowKeyColumnExpression;
-import org.apache.phoenix.expression.RowValueConstructorExpression;
-import org.apache.phoenix.expression.StringBasedLikeExpression;
-import org.apache.phoenix.expression.StringConcatExpression;
-import org.apache.phoenix.expression.TimestampAddExpression;
-import org.apache.phoenix.expression.TimestampSubtractExpression;
+import org.apache.phoenix.expression.*;
 import org.apache.phoenix.expression.function.ArrayAllComparisonExpression;
 import org.apache.phoenix.expression.function.ArrayAnyComparisonExpression;
 import org.apache.phoenix.expression.function.ArrayElemRefExpression;
@@ -1134,8 +1128,12 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
                     if (null == child.getDataType()) {
                         continue;
                     }
-                    else if (child.getDataType().isCoercibleTo(PDecimal.INSTANCE)) {
+                    else if (child.getDataType().isCoercibleTo(PLong.INSTANCE)) {
                         continue;
+                    }
+                    else if (child.getDataType().isCoercibleTo(PDecimal.INSTANCE)) {
+                        if (modType == PLong.INSTANCE)
+                            modType = PDecimal.INSTANCE;
                     }
                     else if (child.getDataType().isCoercibleTo(PDouble.INSTANCE)) {
                         modType = PDouble.INSTANCE;
@@ -1145,7 +1143,10 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
                                 child.getDataType(), node.toString());
                     }
                 }
-                if (PDecimal.INSTANCE == modType) {
+                if (PLong.INSTANCE == modType) {
+                    return new LongModulusExpression(children);
+                }
+                else if (PDecimal.INSTANCE == modType) {
                     return new DecimalModulusExpression(children);
                 }
                 else if (PDouble.INSTANCE == modType){
