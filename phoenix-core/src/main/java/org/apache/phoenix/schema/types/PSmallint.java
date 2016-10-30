@@ -18,6 +18,7 @@
 package org.apache.phoenix.schema.types;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Types;
 
 import org.apache.hadoop.hbase.util.Bytes;
@@ -104,6 +105,7 @@ public class PSmallint extends PWholeNumber<Short> {
         return actualType.getCodec().decodeShort(b, o, sortOrder);
       } else if (actualType == PDecimal.INSTANCE) {
         BigDecimal bd = (BigDecimal)actualType.toObject(b, o, l, actualType, sortOrder);
+        bd = bd.setScale(0, RoundingMode.HALF_UP);
         return bd.shortValueExact();
       }
       throwConstraintViolationException(actualType,this);
