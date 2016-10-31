@@ -213,20 +213,20 @@ public class ModulusExpressionIT extends ParallelStatsDisabledIT {
     public void testTypeInteger() throws SQLException {
         testDataType("INTEGER", "INTEGER ",
                 new BigDecimal("1011"), new BigDecimal("11"),
-                new BigDecimal("1E+1"));
+                new BigDecimal("10"));
         testDataType("UNSIGNED_INT", "INTEGER ",
                 new BigDecimal("1011"), new BigDecimal("11"),
-                new BigDecimal("1E+1"));
+                new BigDecimal("10"));
     }
 
     @Test
     public void testTypeBigInt() throws SQLException {
         testDataType("BIGINT", "BIGINT",
                 new BigDecimal("1011"), new BigDecimal("11"),
-                new BigDecimal("1E+1"));
+                new BigDecimal("10"));
         testDataType("UNSIGNED_LONG", "BIGINT",
                 new BigDecimal("1011"), new BigDecimal("11"),
-                new BigDecimal("1E+1"));
+                new BigDecimal("10"));
     }
 
     @Test

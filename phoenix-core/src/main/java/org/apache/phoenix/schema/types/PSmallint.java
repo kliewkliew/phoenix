@@ -105,7 +105,7 @@ public class PSmallint extends PWholeNumber<Short> {
         return actualType.getCodec().decodeShort(b, o, sortOrder);
       } else if (actualType == PDecimal.INSTANCE) {
         BigDecimal bd = (BigDecimal)actualType.toObject(b, o, l, actualType, sortOrder);
-        bd = bd.setScale(0, RoundingMode.HALF_UP);
+        bd = bd.setScale(0, RoundingMode.DOWN);
         return bd.shortValueExact();
       }
       throwConstraintViolationException(actualType,this);

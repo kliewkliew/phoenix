@@ -1121,7 +1121,7 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
         return visitLeave(node, children, null, new ArithmeticExpressionFactory() {
             @Override
             public Expression create(ArithmeticParseNode node, List<Expression> children) throws SQLException {
-                PDataType modType = PDecimal.INSTANCE;
+                PDataType modType = PLong.INSTANCE;
                 Determinism determinism = Determinism.ALWAYS;
                 for (Expression child: children) {
                     determinism = determinism.combine(child.getDeterminism());

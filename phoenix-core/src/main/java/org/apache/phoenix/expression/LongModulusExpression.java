@@ -20,8 +20,10 @@ package org.apache.phoenix.expression;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.phoenix.schema.tuple.Tuple;
 import org.apache.phoenix.schema.types.PDataType;
+import org.apache.phoenix.schema.types.PDecimal;
 import org.apache.phoenix.schema.types.PLong;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -39,7 +41,18 @@ public class LongModulusExpression extends ModulusExpression {
         final Expression remainderExpression = new DecimalSubtractExpression(Arrays.asList(
                 getMinuend(), getSubtrahendExpression()));
 
-        return remainderExpression.evaluate(tuple, ptr);
+        if (!remainderExpression.evaluate(tuple, ptr)) {
+            return false;
+        }
+
+        try {
+            return LiteralExpression.newConstant(
+                    PDecimal.INSTANCE.toObject(ptr), PLong.INSTANCE,
+                    remainderExpression.getSortOrder(), remainderExpression.getDeterminism())
+                    .evaluate(tuple, ptr);
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     @Override

@@ -93,7 +93,7 @@ public class PLong extends PWholeNumber<Long> {
             return s;
         } else if (actualType == PDecimal.INSTANCE) {
             BigDecimal d = (BigDecimal) object;
-            d = d.setScale(0, RoundingMode.HALF_UP);
+            d = d.setScale(0, RoundingMode.DOWN);
             return d.longValueExact();
         } else if (equalsAny(actualType, PDate.INSTANCE, PUnsignedDate.INSTANCE, PTime.INSTANCE,
                 PUnsignedTime.INSTANCE)) {
@@ -117,7 +117,7 @@ public class PLong extends PWholeNumber<Long> {
             return actualType.getCodec().decodeLong(b, o, sortOrder);
         } else if (actualType == PDecimal.INSTANCE) {
             BigDecimal bd = (BigDecimal) actualType.toObject(b, o, l, actualType, sortOrder);
-            bd = bd.setScale(0, RoundingMode.HALF_UP);
+            bd = bd.setScale(0, RoundingMode.DOWN);
             return bd.longValueExact();
         }
         throwConstraintViolationException(actualType, this);
