@@ -41,11 +41,13 @@ import org.apache.phoenix.expression.DateAddExpression;
 import org.apache.phoenix.expression.DateSubtractExpression;
 import org.apache.phoenix.expression.DecimalAddExpression;
 import org.apache.phoenix.expression.DecimalDivideExpression;
+import org.apache.phoenix.expression.DecimalModulusExpression;
 import org.apache.phoenix.expression.DecimalMultiplyExpression;
 import org.apache.phoenix.expression.DecimalSubtractExpression;
 import org.apache.phoenix.expression.Determinism;
 import org.apache.phoenix.expression.DoubleAddExpression;
 import org.apache.phoenix.expression.DoubleDivideExpression;
+import org.apache.phoenix.expression.DoubleModulusExpression;
 import org.apache.phoenix.expression.DoubleMultiplyExpression;
 import org.apache.phoenix.expression.DoubleSubtractExpression;
 import org.apache.phoenix.expression.Expression;
@@ -55,9 +57,9 @@ import org.apache.phoenix.expression.LikeExpression;
 import org.apache.phoenix.expression.LiteralExpression;
 import org.apache.phoenix.expression.LongAddExpression;
 import org.apache.phoenix.expression.LongDivideExpression;
+import org.apache.phoenix.expression.LongModulusExpression;
 import org.apache.phoenix.expression.LongMultiplyExpression;
 import org.apache.phoenix.expression.LongSubtractExpression;
-import org.apache.phoenix.expression.ModulusExpression;
 import org.apache.phoenix.expression.NotExpression;
 import org.apache.phoenix.expression.OrExpression;
 import org.apache.phoenix.expression.RowKeyColumnExpression;
@@ -1126,15 +1128,40 @@ public class ExpressionCompiler extends UnsupportedAllParseNodeVisitor<Expressio
         return visitLeave(node, children, null, new ArithmeticExpressionFactory() {
             @Override
             public Expression create(ArithmeticParseNode node, List<Expression> children) throws SQLException {
-                // ensure integer types
-                for(Expression child : children) {
-                    PDataType type = child.getDataType();
-                    if(type != null && !type.isCoercibleTo(PLong.INSTANCE)) {
-                        throw TypeMismatchException.newException(type, node.toString());
+                PDataType modType = PLong.INSTANCE;
+                Determinism determinism = Determinism.ALWAYS;
+                for (Expression child: children) {
+                    determinism = determinism.combine(child.getDeterminism());
+                    if (null == child.getDataType()) {
+                        continue;
+                    }
+                    else if (child.getDataType().isCoercibleTo(PLong.INSTANCE)) {
+                        continue;
+                    }
+                    else if (child.getDataType().isCoercibleTo(PDecimal.INSTANCE)) {
+                        if (modType == PLong.INSTANCE)
+                            modType = PDecimal.INSTANCE;
+                    }
+                    else if (child.getDataType().isCoercibleTo(PDouble.INSTANCE)) {
+                        modType = PDouble.INSTANCE;
+                    }
+                    else {
+                        throw TypeMismatchException.newException(
+                                child.getDataType(), node.toString());
                     }
                 }
-                
-                return new ModulusExpression(children);
+                if (PLong.INSTANCE == modType) {
+                    return new LongModulusExpression(children);
+                }
+                else if (PDecimal.INSTANCE == modType) {
+                    return new DecimalModulusExpression(children);
+                }
+                else if (PDouble.INSTANCE == modType){
+                    return new DoubleModulusExpression(children);
+                }
+                else {
+                    return LiteralExpression.newConstant(null, modType, determinism);
+                }
             }
         });
     }

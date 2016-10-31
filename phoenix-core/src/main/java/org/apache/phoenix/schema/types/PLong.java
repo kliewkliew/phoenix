@@ -18,6 +18,7 @@
 package org.apache.phoenix.schema.types;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Types;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -92,6 +93,7 @@ public class PLong extends PWholeNumber<Long> {
             return s;
         } else if (actualType == PDecimal.INSTANCE) {
             BigDecimal d = (BigDecimal) object;
+            d = d.setScale(0, RoundingMode.DOWN);
             return d.longValueExact();
         } else if (equalsAny(actualType, PDate.INSTANCE, PUnsignedDate.INSTANCE, PTime.INSTANCE,
                 PUnsignedTime.INSTANCE)) {
@@ -115,6 +117,7 @@ public class PLong extends PWholeNumber<Long> {
             return actualType.getCodec().decodeLong(b, o, sortOrder);
         } else if (actualType == PDecimal.INSTANCE) {
             BigDecimal bd = (BigDecimal) actualType.toObject(b, o, l, actualType, sortOrder);
+            bd = bd.setScale(0, RoundingMode.DOWN);
             return bd.longValueExact();
         }
         throwConstraintViolationException(actualType, this);
