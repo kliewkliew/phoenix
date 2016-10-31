@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -308,6 +309,7 @@ public class ModulusExpressionIT extends ParallelStatsDisabledIT {
         ResultSet rs = conn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
         assertEquals(result, rs.getBigDecimal(1));
+        assertEquals(result.setScale(0, RoundingMode.DOWN).longValueExact(), rs.getLong(1));
         assertFalse(rs.next());
     }
 
