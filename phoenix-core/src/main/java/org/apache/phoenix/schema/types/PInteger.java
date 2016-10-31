@@ -18,6 +18,7 @@
 package org.apache.phoenix.schema.types;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Types;
 
 import org.apache.hadoop.hbase.util.Bytes;
@@ -81,6 +82,7 @@ public class PInteger extends PWholeNumber<Integer> {
       return actualType.getCodec().decodeInt(b, o, sortOrder);
     } else if (actualType == PDecimal.INSTANCE) {
       BigDecimal bd = (BigDecimal) actualType.toObject(b, o, l, actualType, sortOrder);
+      bd = bd.setScale(0, RoundingMode.DOWN);
       return bd.intValueExact();
     }
     throwConstraintViolationException(actualType, this);

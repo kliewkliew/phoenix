@@ -17,25 +17,20 @@
  */
 package org.apache.phoenix.expression;
 
+import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.phoenix.expression.function.FloorDecimalExpression;
 import org.apache.phoenix.expression.visitor.ExpressionVisitor;
-import org.apache.phoenix.schema.tuple.Tuple;
-import org.apache.phoenix.schema.types.PDataType;
-import org.apache.phoenix.schema.types.PLong;
 
 
 /**
- * 
- * Implementation of the LENGTH(<string>) build-in function. <string> is the string
- * of characters we want to find the length of. If <string> is NULL or empty, null
- * is returned.
- * 
- * 
+ *
+ * Modulus expression implementation
+ *
  * @since 0.1
  */
-public class ModulusExpression extends ArithmeticExpression {
+public abstract class ModulusExpression extends ArithmeticExpression {
 
     public ModulusExpression() { }
 
@@ -43,49 +38,12 @@ public class ModulusExpression extends ArithmeticExpression {
         super(children);
     }
 
-    private Expression getDividendExpression() {
+    protected Expression getDividendExpression() {
         return children.get(0);
     }
-    
-    private Expression getDivisorExpression() {
+
+    protected Expression getDivisorExpression() {
         return children.get(1);
-    }
-
-    @Override
-    public boolean evaluate(Tuple tuple, ImmutableBytesWritable ptr) {
-        // get the dividend
-        Expression dividendExpression = getDividendExpression();
-        if (!dividendExpression.evaluate(tuple, ptr)) {
-            return false;
-        }
-        if (ptr.getLength() == 0) {
-            return true;
-        }
-        long dividend = dividendExpression.getDataType().getCodec().decodeLong(ptr, dividendExpression.getSortOrder());
-        
-        // get the divisor
-        Expression divisorExpression = getDivisorExpression();
-        if (!divisorExpression.evaluate(tuple, ptr)) {
-            return false;
-        }
-        if (ptr.getLength() == 0) {
-            return true;
-        }
-        long divisor = divisorExpression.getDataType().getCodec().decodeLong(ptr, divisorExpression.getSortOrder());
-        
-        // actually perform modulus
-        long remainder = dividend % divisor;
-        
-        // return the result, use encodeLong to avoid extra Long allocation
-        byte[] resultPtr=new byte[PLong.INSTANCE.getByteSize()];
-        getDataType().getCodec().encodeLong(remainder, resultPtr, 0);
-        ptr.set(resultPtr);
-        return true;
-    }
-
-    @Override
-    public PDataType getDataType() {
-        return PLong.INSTANCE;
     }
 
     @Override
@@ -103,8 +61,4 @@ public class ModulusExpression extends ArithmeticExpression {
         return t;
     }
 
-    @Override
-    public ArithmeticExpression clone(List<Expression> children) {
-        return new ModulusExpression(children);
-    }
 }

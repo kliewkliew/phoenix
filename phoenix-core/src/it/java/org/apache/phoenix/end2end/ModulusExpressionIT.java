@@ -23,6 +23,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -188,5 +190,127 @@ public class ModulusExpressionIT extends ParallelStatsDisabledIT {
         assertFalse(rs.next());
     }
 
+    @Test
+    public void testTypeTinyInt() throws SQLException {
+        testDataType("TINYINT", "TINYINT",
+                new BigDecimal("101"), new BigDecimal("11"),
+                new BigDecimal("2"));
+        testDataType("UNSIGNED_TINYINT", "TINYINT",
+                new BigDecimal("101"), new BigDecimal("11"),
+                new BigDecimal("2"));
+    }
+
+    @Test
+    public void testTypeSmallInt() throws SQLException {
+        testDataType("SMALLINT", "SMALLINT",
+                new BigDecimal("101"), new BigDecimal("11"),
+                new BigDecimal("2"));
+        testDataType("UNSIGNED_SMALLINT", "SMALLINT",
+                new BigDecimal("101"), new BigDecimal("11"),
+                new BigDecimal("2"));
+    }
+
+    @Test
+    public void testTypeInteger() throws SQLException {
+        testDataType("INTEGER", "INTEGER ",
+                new BigDecimal("1011"), new BigDecimal("11"),
+                new BigDecimal("10"));
+        testDataType("UNSIGNED_INT", "INTEGER ",
+                new BigDecimal("1011"), new BigDecimal("11"),
+                new BigDecimal("10"));
+    }
+
+    @Test
+    public void testTypeBigInt() throws SQLException {
+        testDataType("BIGINT", "BIGINT",
+                new BigDecimal("1011"), new BigDecimal("11"),
+                new BigDecimal("10"));
+        testDataType("UNSIGNED_LONG", "BIGINT",
+                new BigDecimal("1011"), new BigDecimal("11"),
+                new BigDecimal("10"));
+    }
+
+    @Test
+    public void testTypeFloat() throws SQLException {
+        testDataType("FLOAT", "FLOAT",
+                new BigDecimal("10.11"), new BigDecimal("1.1"),
+                new BigDecimal("0.209999442100524"));
+        testDataType("UNSIGNED_FLOAT", "FLOAT",
+                new BigDecimal("10.11"), new BigDecimal("1.1"),
+                new BigDecimal("0.209999442100524"));
+    }
+
+    @Test
+    public void testTypeDouble() throws SQLException {
+        testDataType("DOUBLE", "DOUBLE",
+                new BigDecimal("10.11"), new BigDecimal("1.1"),
+                new BigDecimal("0.21"));
+        testDataType("UNSIGNED_DOUBLE", "DOUBLE",
+                new BigDecimal("10.11"), new BigDecimal("1.1"),
+                new BigDecimal("0.21"));
+    }
+
+    @Test
+    public void testTypeDecimal() throws SQLException {
+        testDataType("DECIMAL", "DECIMAL",
+                new BigDecimal("10.11"), new BigDecimal("1.1"),
+                new BigDecimal("0.21"));
+    }
+
+    @Test
+    public void testTypeMixedFractional() throws SQLException {
+        testDataType("DOUBLE", "DECIMAL",
+                new BigDecimal("10.11"), new BigDecimal("1.1"),
+                new BigDecimal("0.21"));
+        testDataType("DECIMAL", "DOUBLE",
+                new BigDecimal("10.11"), new BigDecimal("1.1"),
+                new BigDecimal("0.21"));
+    }
+
+    @Test
+    public void testTypeMixedFractionalWhole() throws SQLException {
+        testDataType("INTEGER", "DECIMAL",
+                new BigDecimal("10"), new BigDecimal("1.1"),
+                new BigDecimal("0.1"));
+        testDataType("INTEGER", "DOUBLE",
+                new BigDecimal("10"), new BigDecimal("1.1"),
+                new BigDecimal("0.1"));
+        testDataType("DECIMAL", "INTEGER",
+                new BigDecimal("10.1"), new BigDecimal("1"),
+                new BigDecimal("0.1"));
+        testDataType("DOUBLE", "INTEGER",
+                new BigDecimal("10.1"), new BigDecimal("1"),
+                new BigDecimal("0.1"));
+    }
+
+    private void testDataType(
+            String dividendType, String divisorType,
+            BigDecimal dividend, BigDecimal divisor,
+            BigDecimal result
+    ) throws SQLException {
+        Connection conn = DriverManager.getConnection(getUrl());
+        String tableName = generateUniqueName();
+
+        String ddl = "CREATE TABLE " + tableName + " ("
+                + " dividend " + dividendType + " NOT NULL PRIMARY KEY,"
+                + " divisor " + divisorType
+                + ")";
+        conn.createStatement().execute(ddl);
+        String dml = "UPSERT INTO " + tableName + " VALUES(?, ?)";
+        PreparedStatement stmt = conn.prepareStatement(dml);
+        stmt.setBigDecimal(1, dividend);
+        stmt.setBigDecimal(2, divisor);
+        stmt.execute();
+        conn.commit();
+
+
+        String sql = "SELECT dividend % divisor FROM " + tableName;
+
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(result, rs.getBigDecimal(1));
+        assertEquals(result.setScale(0, RoundingMode.DOWN).longValueExact(), rs.getLong(1));
+        assertFalse(rs.next());
+    }
 
 }
