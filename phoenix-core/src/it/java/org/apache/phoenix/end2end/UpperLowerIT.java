@@ -48,8 +48,7 @@ public class UpperLowerIT extends ParallelStatsDisabledIT {
                 + "1, '%s', '%s'"
                 + ")",
                 tableName, firstName, lastName);
-        PreparedStatement stmt = conn.prepareStatement(dml);
-        stmt.execute();
+        conn.createStatement().execute(dml);
         conn.commit();
     }
 
