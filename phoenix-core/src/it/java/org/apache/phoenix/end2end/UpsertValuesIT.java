@@ -21,6 +21,7 @@ import static org.apache.phoenix.util.TestUtil.closeStatement;
 import static org.apache.phoenix.util.TestUtil.closeStmtAndConn;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -971,5 +972,444 @@ public class UpsertValuesIT extends BaseClientManagedTimeIT {
         props.setProperty(PhoenixRuntime.CURRENT_SCN_ATTRIB, Long.toString(ts));
         return DriverManager.getConnection(getUrl(), props);
     }
-    
+
+    @Test
+    public void testUpsertImplicitSubsetColumns() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k2)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table + " VALUES('aa', 'bb')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertEquals("bb", rs.getString(2));
+        assertNull(rs.getString(3));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertImplicitSubsetColumns2() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR, k4 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k2)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table + " VALUES('aa', 'bb', 'cc')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertEquals("bb", rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertNull(rs.getString(4));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsInOrder() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR, k4 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table
+                + " (k1, k3, k4)"
+                + " VALUES('aa', 'cc', 'dd')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertNull(rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertEquals("dd", rs.getString(4));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsOutOfOrder() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR, k4 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table
+                + " (k3, k1, k4)"
+                + " VALUES('cc', 'aa', 'dd')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertNull(rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertEquals("dd", rs.getString(4));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetPKColumnsInOrder() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k3)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table + " (k1, k3) VALUES('aa', 'cc')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertNull(rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetMixedColumnsInOrder() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR, k4 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k2)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table
+                + " (k1, k2, k4)"
+                + " VALUES('aa', 'bb', 'dd')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertEquals("bb", rs.getString(2));
+        assertNull(rs.getString(3));
+        assertEquals("dd", rs.getString(4));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetMixedColumnsInOrder2() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR, k4 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k3)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table
+                + " (k1, k3, k4)"
+                + " VALUES('aa', 'cc', 'dd')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertNull(rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertEquals("dd", rs.getString(4));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsNull() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR, k4 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table
+                + " (k1, k2, k3)"
+                + " VALUES('aa', null, 'cc')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertNull(rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertNull(rs.getString(4));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetPKColumnsOutOfOrder() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k3)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table + " (k3, k1) VALUES('cc', 'aa')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertNull(rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertAllColumns() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k2)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table + " VALUES('aa', 'bb')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertEquals("bb", rs.getString(2));
+        assertFalse(rs.next());
+        conn.close();
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsOutOfOrderDefaultValues() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR DEFAULT 'def', k3 VARCHAR, k4 VARCHAR, k5 VARCHAR"
+                + "CONSTRAINT pk PRIMARY KEY (k1, k2)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table
+                + " (k3, k1, k4)"
+                + " VALUES('cc', 'aa', 'dd')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertEquals("def", rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertEquals("dd", rs.getString(4));
+        assertNull(rs.getString(4));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void testUpsertImplicitSubsetColumnsTrailingPKNull() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k3)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table + " VALUES('aa', 'bb')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertEquals("aa", rs.getString(1));
+        assertEquals("bb", rs.getString(2));
+        assertFalse(rs.next());
+        conn.close();
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsLeadingPKNull() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1,k2)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        conn.createStatement().execute("UPSERT INTO " + table + " (k2, k3) VALUES('bb', 'cc')");
+        conn.commit();
+
+        ts = nextTimestamp();
+        conn = getConnection(ts);
+        ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT * FROM " + table);
+        assertTrue(rs.next());
+        assertNull(rs.getString(1));
+        assertEquals("bb", rs.getString(2));
+        assertEquals("cc", rs.getString(3));
+        assertFalse(rs.next());
+        conn.close();
+    }
+
+    @Test
+    public void testUpsertImplicitSubsetColumnsSinglePKNull() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k3)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        try {
+            conn.createStatement().execute("UPSERT INTO " + table + " VALUES('aa', 'bb')");
+            fail();
+        } catch (SQLException e) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsSinglePKNull() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        try {
+            conn.createStatement().execute("UPSERT INTO " + table + " (k2, k3) VALUES('bb', 'cc')");
+            fail();
+        } catch (SQLException e) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsSinglePKNull2() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k3)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        try {
+            conn.createStatement().execute("UPSERT INTO " + table + " (k1, k2) VALUES('aa', 'bb')");
+            fail();
+        } catch (SQLException e) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void testUpsertExplicitSubsetColumnsDuplicate() throws SQLException {
+        String table = generateUniqueName();
+
+        long ts = nextTimestamp();
+        Connection conn = getConnection(ts);
+        String ddl = "CREATE TABLE " + table + " ("
+                + "k1 VARCHAR, k2 VARCHAR, k3 VARCHAR,"
+                + "CONSTRAINT pk PRIMARY KEY (k1)"
+                + ")";
+        conn.createStatement().execute(ddl);
+        conn.commit();
+        try {
+            conn.createStatement().execute(
+                    "UPSERT INTO " + table + " (k1, k2, k2) VALUES('aa', 'bb', 'cc')");
+            fail();
+        } catch (SQLException e) {
+            // Expected
+        }
+    }
+
 }

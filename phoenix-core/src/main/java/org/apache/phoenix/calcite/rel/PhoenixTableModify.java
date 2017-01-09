@@ -6,8 +6,10 @@ import java.sql.ParameterMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.apache.calcite.plan.RelOptCluster;
@@ -17,6 +19,7 @@ import org.apache.calcite.prepare.Prepare.CatalogReader;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.util.Pair;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.phoenix.calcite.PhoenixTable;
@@ -42,6 +45,7 @@ import org.apache.phoenix.jdbc.PhoenixStatement;
 import org.apache.phoenix.query.ConnectionQueryServices;
 import org.apache.phoenix.query.QueryServices;
 import org.apache.phoenix.query.QueryServicesOptions;
+import org.apache.phoenix.schema.ConstraintViolationException;
 import org.apache.phoenix.schema.IllegalDataException;
 import org.apache.phoenix.schema.PColumn;
 import org.apache.phoenix.schema.PName;
@@ -110,13 +114,21 @@ public class PhoenixTableModify extends TableModify implements PhoenixRel {
             final List<PColumn> mappedColumns = targetTable.tableMapping.getMappedColumns();
             final int[] columnIndexes = new int[mappedColumns.size()];
             final int[] pkSlotIndexes = new int[mappedColumns.size()];
-            for (int i = 0; i < columnIndexes.length; i++) {
+            PriorityQueue<Pair<Integer,Integer>> positionIndexPQ =
+                    new PriorityQueue<>(
+                            mappedColumns.size(),
+                            Collections.<Pair<Integer,Integer>>reverseOrder());
+            for (int i = 0; i < mappedColumns.size(); i++) {
                 PColumn column = mappedColumns.get(i);
                 if (SchemaUtil.isPKColumn(column)) {
-                    pkSlotIndexes[i] = column.getPosition();
+                    positionIndexPQ.add(Pair.of(column.getPosition(), i));
                 }
                 columnIndexes[i] = column.getPosition();
             }
+            while (null != positionIndexPQ.peek()) {
+                pkSlotIndexes[positionIndexPQ.element().right] = positionIndexPQ.remove().left;
+            }
+
             // TODO
             final boolean useServerTimestamp = false;
             
@@ -161,29 +173,35 @@ public class PhoenixTableModify extends TableModify implements PhoenixRel {
                     int rowCount = 0;
                     Map<ImmutableBytesPtr, RowMutationState> mutation = Maps.newHashMapWithExpectedSize(batchSize);
                     PTable table = targetTableRef.getTable();
+                    assert projector.getColumnProjectors().size() <= values.length;
                     try (ResultSet rs = new PhoenixResultSet(iterator, projector, childContext)) {
                         ImmutableBytesWritable ptr = new ImmutableBytesWritable();
                         while (rs.next()) {
                             for (int i = 0; i < values.length; i++) {
                                 PColumn column = table.getColumns().get(columnIndexes[i]);
-                                byte[] bytes = rs.getBytes(i + 1);
-                                ptr.set(bytes == null ? ByteUtil.EMPTY_BYTE_ARRAY : bytes);
-                                Object value = rs.getObject(i + 1);
-                                int rsPrecision = rs.getMetaData().getPrecision(i + 1);
-                                Integer precision = rsPrecision == 0 ? null : rsPrecision;
-                                int rsScale = rs.getMetaData().getScale(i + 1);
-                                Integer scale = rsScale == 0 ? null : rsScale;
-                                // We are guaranteed that the two column will have compatible types,
-                                // as we checked that before.
-                                if (!column.getDataType().isSizeCompatible(ptr, value, column.getDataType(), SortOrder.getDefault(), precision,
-                                        scale, column.getMaxLength(), column.getScale())) { throw new SQLExceptionInfo.Builder(
-                                        SQLExceptionCode.DATA_EXCEEDS_MAX_CAPACITY).setColumnName(column.getName().getString())
-                                        .setMessage("value=" + column.getDataType().toStringLiteral(ptr, null)).build()
-                                        .buildException(); }
-                                column.getDataType().coerceBytes(ptr, value, column.getDataType(), 
-                                        precision, scale, SortOrder.getDefault(), 
-                                        column.getMaxLength(), column.getScale(), column.getSortOrder(),
-                                        table.rowKeyOrderOptimizable());
+                                if (projector.getColumnCount() > i) {
+                                    byte[] bytes = rs.getBytes(i + 1);
+                                    ptr.set(bytes == null ? ByteUtil.EMPTY_BYTE_ARRAY : bytes);
+                                    Object value = rs.getObject(i + 1);
+                                    int rsPrecision = rs.getMetaData().getPrecision(i + 1);
+                                    Integer precision = rsPrecision == 0 ? null : rsPrecision;
+                                    int rsScale = rs.getMetaData().getScale(i + 1);
+                                    Integer scale = rsScale == 0 ? null : rsScale;
+                                    // We are guaranteed that the two column will have compatible types,
+                                    // as we checked that before.
+                                    if (!column.getDataType().isSizeCompatible(ptr, value, column.getDataType(), SortOrder.getDefault(), precision,
+                                            scale, column.getMaxLength(), column.getScale())) { throw new SQLExceptionInfo.Builder(
+                                            SQLExceptionCode.DATA_EXCEEDS_MAX_CAPACITY).setColumnName(column.getName().getString())
+                                            .setMessage("value=" + column.getDataType().toStringLiteral(ptr, null)).build()
+                                            .buildException(); }
+                                    column.getDataType().coerceBytes(ptr, value, column.getDataType(),
+                                            precision, scale, SortOrder.getDefault(),
+                                            column.getMaxLength(), column.getScale(), column.getSortOrder(),
+                                            table.rowKeyOrderOptimizable());
+                                }
+                                else {
+                                    ptr.set(ByteUtil.EMPTY_BYTE_ARRAY);
+                                }
                                 values[i] = ByteUtil.copyKeyBytesIfNecessary(ptr);
                             }
                             // TODO onDupKeyBytes
