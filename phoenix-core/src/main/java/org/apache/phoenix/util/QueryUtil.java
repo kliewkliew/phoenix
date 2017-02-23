@@ -375,15 +375,15 @@ public final class QueryUtil {
 
     public static String getViewStatement(
         String schemaName, String tableName, List<ColumnDef> columnDefs, String where) {
-        String prefix =
+        final String prefix =
             SELECT + " " + WildcardParseNode.NAME + " "
                 + FROM + " " + SchemaUtil.getTableName(schemaName, tableName);
-        String suffix = WHERE + " " + where;
+        final String suffix = WHERE + " " + where;
         if (columnDefs.isEmpty()) {
             return prefix + suffix;
         }
 
-        StringBuilder infix = new StringBuilder();
+        final StringBuilder infix = new StringBuilder();
         infix.append("(");
         for (ColumnDef columnDef : columnDefs) {
             infix.append(columnDef.getColumnDefName());

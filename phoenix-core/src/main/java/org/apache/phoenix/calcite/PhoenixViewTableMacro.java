@@ -25,6 +25,7 @@ import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.schema.*;
 import org.apache.calcite.schema.impl.MaterializedViewTable;
@@ -37,6 +38,7 @@ import org.apache.phoenix.jdbc.PhoenixConnection;
 import org.apache.phoenix.parse.ColumnDef;
 import org.apache.phoenix.parse.NamedTableNode;
 import org.apache.phoenix.parse.TableName;
+import org.apache.phoenix.schema.PColumn;
 import org.apache.phoenix.util.PhoenixRuntime;
 import org.apache.phoenix.util.SchemaUtil;
 
@@ -105,11 +107,22 @@ public class PhoenixViewTable extends ViewTable {
               schemaPath != null ? schemaPath : schema.path(null);
           final JavaTypeFactory typeFactory = (JavaTypeFactory) parsed.typeFactory;
           final Type elementType = typeFactory.getJavaClass(parsed.rowType);
-          final ImmutableList<Integer> viewColumnMapping =
+          ImmutableList<Integer> viewColumnMapping =
               new ImmutableList.Builder<Integer>()
                   .addAll(parsed.columnMapping)
-                  .add(3)// FIXME: don't hardcode. actually calculate mapping. maybe not necessary if we create the table with dynamic columns
                   .build();
+          if (parsed.table instanceof Wrapper) {
+            ImmutableList.Builder<Integer> newViewColumnMapping = ImmutableList.builder();
+            final PhoenixTable pTable = ((Wrapper) parsed.table).unwrap(PhoenixTable.class);
+            final PColumn tenantIdCol =
+                pTable.tableMapping.getTableRef().getTable().getPKColumns().get(0);
+            for (Integer tableIndex : parsed.columnMapping.subList(0, parsed.columnMapping.size())) {
+              if (tableIndex != tenantIdCol.getPosition()) {// FIXME: only remove if tenant-specific table
+                newViewColumnMapping.add(tableIndex);
+              }
+            }
+            viewColumnMapping = newViewColumnMapping.build();
+          }
           return new ModifiableViewTable(elementType,
               RelDataTypeImpl.proto(viewTable.getRowType(typeFactory)), viewSql, schemaPath1, viewPath,
               viewTable,

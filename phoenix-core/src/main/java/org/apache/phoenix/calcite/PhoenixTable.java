@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.google.common.collect.Iterables;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
@@ -21,6 +22,7 @@ import org.apache.calcite.schema.ExtensibleTable;
 import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -62,7 +64,7 @@ import static org.apache.phoenix.query.QueryConstants.DEFAULT_COLUMN_FAMILY;
  * Phoenix.
  */
 public class PhoenixTable extends AbstractTable
-    implements TranslatableTable, CustomColumnResolvingTable, ExtensibleTable {
+    implements TranslatableTable, CustomColumnResolvingTable, ExtensibleTable, Wrapper {
   public final TableMapping tableMapping;
   public final ImmutableBitSet pkBitSet;
   public final RelCollation collation;
@@ -213,22 +215,33 @@ public class PhoenixTable extends AbstractTable
           colType.getPrecision(),
           colType.getScale(),
           colType.isNullable(),
-          field.getIndex(),// TODO: test
+          field.getIndex(),
           SortOrder.ASC,// TODO: get this from metastore? test if specifying ASC or DESC is allowed. use Docker image
           colType.isStruct() ? field.getType().getFieldCount() : 0,
           null, false, null, false, true);
       extendedColumns.add(column);
     }
+    final List<PColumn> allColumns = ImmutableList.copyOf(Iterables.concat(
+        tableMapping.getTableRef().getTable().getColumns(), extendedColumns.build()));
     try {
-    final PTable extendedTable = PTableImpl.makePTable(
-        tableMapping.getPTable(),
-        extendedColumns.build());
+    final PTable extendedTable = PTableImpl.makePTable(tableMapping.getPTable(), allColumns);
     final TableRef extendedTableRef = new TableRef(extendedTable);
       final TableMapping newMapping =
           new TableMapping(tableMapping.getTableRef(), extendedTableRef, true);
       return new PhoenixTable(newMapping, pkBitSet, collation, byteCount, rowCount, pc);
     } catch (SQLException e) {
-      throw new RuntimeException("Could not create extended table");
+      throw new RuntimeException("Could not create extended table", e);
     }
+  }
+
+  @Override public int extendedColumnOffset() {
+    return tableMapping.getTableRef().getTable().getColumns().size();
+  }
+
+  @Override public <C> C unwrap(Class<C> aClass) {
+    if (aClass.isInstance(this)) {
+      return aClass.cast(this);
+    }
+    return null;
   }
 }
