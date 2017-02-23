@@ -391,4 +391,8 @@ public class StringUtil {
     	// see http://stackoverflow.com/questions/4653831/regex-how-to-escape-backslashes-and-special-characters
     	return input.replaceAll("\\\\","\\\\\\\\");
     }
+
+    public static String quoted(String input) {
+        return String.format("\"%s\"", input);
+    }
 }

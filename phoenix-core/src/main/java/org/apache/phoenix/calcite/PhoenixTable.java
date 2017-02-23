@@ -17,6 +17,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.CustomColumnResolvingTable;
+import org.apache.calcite.schema.ExtensibleTable;
 import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
@@ -54,7 +55,7 @@ import com.google.common.collect.Lists;
  * Phoenix.
  */
 public class PhoenixTable extends AbstractTable
-    implements TranslatableTable, CustomColumnResolvingTable {
+    implements TranslatableTable, CustomColumnResolvingTable/*TODO:, ExtensibleTable*/ {
   public final TableMapping tableMapping;
   public final ImmutableBitSet pkBitSet;
   public final RelCollation collation;

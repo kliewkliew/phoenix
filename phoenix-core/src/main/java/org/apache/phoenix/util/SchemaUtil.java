@@ -23,6 +23,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.apache.phoenix.jdbc.PhoenixDatabaseMetaData.SYSTEM_CATALOG_NAME_BYTES;
 import static org.apache.phoenix.jdbc.PhoenixDatabaseMetaData.SYSTEM_FUNCTION_NAME_BYTES;
 import static org.apache.phoenix.jdbc.PhoenixDatabaseMetaData.SYSTEM_STATS_NAME_BYTES;
+import static org.apache.phoenix.util.StringUtil.quoted;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -762,6 +763,12 @@ public class SchemaUtil {
         String columnFamily = fullColumnName.substring(0,index);
         String columnName = fullColumnName.substring(index+1);
         return getEscapedArgument(columnFamily) + QueryConstants.NAME_SEPARATOR + getEscapedArgument(columnName) ;
+    }
+
+    public static String getFullTableName(PTable table) {
+        final String schemaName = table.getSchemaName().getString();
+        final String tableName = table.getTableName().getString();
+        return getTableName(schemaName, tableName);
     }
     
     public static String getEscapedFullTableName(String fullTableName) {

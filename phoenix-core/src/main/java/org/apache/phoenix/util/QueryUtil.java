@@ -19,17 +19,20 @@
 package org.apache.phoenix.util;
 
 import static org.apache.phoenix.util.SchemaUtil.getEscapedFullColumnName;
+import static org.apache.phoenix.util.StringUtil.quoted;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +43,7 @@ import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.iterate.ResultIterator;
 import org.apache.phoenix.jdbc.PhoenixConnection;
 import org.apache.phoenix.jdbc.PhoenixEmbeddedDriver;
+import org.apache.phoenix.parse.ColumnDef;
 import org.apache.phoenix.parse.HintNode;
 import org.apache.phoenix.parse.HintNode.Hint;
 import org.apache.phoenix.parse.WildcardParseNode;
@@ -364,13 +368,32 @@ public final class QueryUtil {
         }
         return url;
     }
-    
+
     public static String getViewStatement(String schemaName, String tableName, String where) {
-        // Only form we currently support for VIEWs: SELECT * FROM t WHERE ...
-        return SELECT + " " + WildcardParseNode.NAME + " " + FROM + " " +
-                (schemaName == null || schemaName.length() == 0 ? "" : ("\"" + schemaName + "\".")) +
-                ("\"" + tableName + "\" ") +
-                (WHERE + " " + where);
+        return getViewStatement(schemaName, tableName, ImmutableList.<ColumnDef>of(), where);
+    }
+
+    public static String getViewStatement(
+        String schemaName, String tableName, List<ColumnDef> columnDefs, String where) {
+        String prefix =
+            SELECT + " " + WildcardParseNode.NAME + " "
+                + FROM + " " + SchemaUtil.getTableName(schemaName, tableName);
+        String suffix = WHERE + " " + where;
+        if (columnDefs.isEmpty()) {
+            return prefix + suffix;
+        }
+
+        StringBuilder infix = new StringBuilder();
+        infix.append("(");
+        for (ColumnDef columnDef : columnDefs) {
+            infix.append(columnDef.getColumnDefName());
+            infix.append(" ");
+            infix.append(columnDef.getDataType().getSqlTypeName());
+            infix.append(",");
+        }
+        infix.deleteCharAt(infix.length() - 1);
+        infix.append(") ");
+        return prefix + infix + suffix;
     }
 
     public static Integer getOffsetLimit(Integer limit, Integer offset) {

@@ -308,7 +308,16 @@ public class PhoenixSchema implements Schema {
             final List<TableRef> tables = x.getTables();
             assert tables.size() == 1;
             TableRef tableRef = tables.get(0);
-            if (!isView(tableRef.getTable())) {
+            if (isView(tableRef.getTable())) {
+                final SchemaPlus schema = parentSchema.getSubSchema(this.name);
+                final SchemaPlus viewSqlSchema =
+                    this.schemaName == null ? schema : parentSchema;
+                final String viewSql = tableRef.getTable().getViewStatement();
+                final TableMacro viewMacro = new PhoenixViewTableMacro(schema, viewSql,
+                    CalciteSchema.from(viewSqlSchema).path(null),
+                    null, tableRef.getTable().getViewType() == ViewType.UPDATABLE);
+                table = viewMacro.apply(Lists.newArrayList(schemaName, name, pc));
+            } else {
                 tableRef = fixTableMultiTenancy(tableRef);
                 table = new PhoenixTable(pc, tableRef);
             }

@@ -1169,7 +1169,9 @@ public class MetaDataClient {
             MutationPlan mutationPlan;
             if (index.getIndexType() == IndexType.LOCAL) {
                 PostLocalIndexDDLCompiler compiler =
-                        new PostLocalIndexDDLCompiler(connection, getFullTableName(dataTableRef));
+                        new PostLocalIndexDDLCompiler(
+                            connection,
+                            SchemaUtil.getFullTableName(dataTableRef.getTable()));
                 mutationPlan = compiler.compile(index);
             } else {
                 PostIndexDDLCompiler compiler = new PostIndexDDLCompiler(connection, dataTableRef);
@@ -1235,15 +1237,6 @@ public class MetaDataClient {
         } finally {
             connection.setAutoCommit(wasAutoCommit);
         }
-    }
-
-    private String getFullTableName(TableRef dataTableRef) {
-        String schemaName = dataTableRef.getTable().getSchemaName().getString();
-        String tableName = dataTableRef.getTable().getTableName().getString();
-        String fullName =
-                schemaName == null ? ("\"" + tableName + "\"") : ("\"" + schemaName + "\""
-                        + QueryConstants.NAME_SEPARATOR + "\"" + tableName + "\"");
-        return fullName;
     }
 
     /**
