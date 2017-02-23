@@ -19,6 +19,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.CustomColumnResolvingTable;
 import org.apache.calcite.schema.ExtensibleTable;
 import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -39,29 +40,45 @@ import org.apache.phoenix.parse.TableName;
 import org.apache.phoenix.query.QueryServices;
 import org.apache.phoenix.query.QueryServicesOptions;
 import org.apache.phoenix.schema.PColumn;
+import org.apache.phoenix.schema.PColumnImpl;
+import org.apache.phoenix.schema.PNameFactory;
 import org.apache.phoenix.schema.PTable;
+import org.apache.phoenix.schema.PTableImpl;
 import org.apache.phoenix.schema.SortOrder;
 import org.apache.phoenix.schema.TableRef;
 import org.apache.phoenix.schema.PTable.IndexType;
 import org.apache.phoenix.schema.PTableType;
 import org.apache.phoenix.schema.stats.StatisticsUtil;
+import org.apache.phoenix.schema.types.PDataType;
 import org.apache.phoenix.util.SchemaUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+
+import static org.apache.phoenix.query.QueryConstants.DEFAULT_COLUMN_FAMILY;
 
 /**
  * Implementation of Calcite {@link org.apache.calcite.schema.Table} SPI for
  * Phoenix.
  */
 public class PhoenixTable extends AbstractTable
-    implements TranslatableTable, CustomColumnResolvingTable/*TODO:, ExtensibleTable*/ {
+    implements TranslatableTable, CustomColumnResolvingTable, ExtensibleTable {
   public final TableMapping tableMapping;
   public final ImmutableBitSet pkBitSet;
   public final RelCollation collation;
   public final long byteCount;
   public final long rowCount;
   public final PhoenixConnection pc;
+
+  private PhoenixTable(TableMapping tableMapping, ImmutableBitSet pkBitSet, RelCollation collation,
+      long byteCount, long rowCount, PhoenixConnection pc) {
+    this.tableMapping = tableMapping;
+    this.pkBitSet = pkBitSet;
+    this.collation = collation;
+    this.byteCount = byteCount;
+    this.rowCount = rowCount;
+    this.pc = pc;
+  }
 
   public PhoenixTable(PhoenixConnection pc, TableRef tableRef) throws SQLException {
       this.pc = Preconditions.checkNotNull(pc);
@@ -184,4 +201,34 @@ public class PhoenixTable extends AbstractTable
             RelDataType rowType, RelDataTypeFactory typeFactory, List<String> names) {
         return tableMapping.resolveColumn(rowType, typeFactory, names);
     }
+
+  @Override public Table extend(List<RelDataTypeField> fields) {
+    final ImmutableList.Builder<PColumn> extendedColumns = ImmutableList.builder();
+    for (RelDataTypeField field: fields) {
+      final RelDataType colType = field.getType();
+      final PColumn column = new PColumnImpl(
+          PNameFactory.newName(field.getName()),
+          PNameFactory.newName(DEFAULT_COLUMN_FAMILY),
+          PDataType.fromSqlTypeName(field.getType().getSqlTypeName().getName()),
+          colType.getPrecision(),
+          colType.getScale(),
+          colType.isNullable(),
+          field.getIndex(),// TODO: test
+          SortOrder.ASC,// TODO: get this from metastore? test if specifying ASC or DESC is allowed. use Docker image
+          colType.isStruct() ? field.getType().getFieldCount() : 0,
+          null, false, null, false, true);
+      extendedColumns.add(column);
+    }
+    try {
+    final PTable extendedTable = PTableImpl.makePTable(
+        tableMapping.getPTable(),
+        extendedColumns.build());
+    final TableRef extendedTableRef = new TableRef(extendedTable);
+      final TableMapping newMapping =
+          new TableMapping(tableMapping.getTableRef(), extendedTableRef, true);
+      return new PhoenixTable(newMapping, pkBitSet, collation, byteCount, rowCount, pc);
+    } catch (SQLException e) {
+      throw new RuntimeException("Could not create extended table");
+    }
+  }
 }

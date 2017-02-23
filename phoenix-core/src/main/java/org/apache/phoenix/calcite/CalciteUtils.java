@@ -202,9 +202,9 @@ public class CalciteUtils {
         final PDataType normalizedBaseType = PDataType.fromTypeId(sqlTypeId);
         final SqlTypeName sqlTypeName = SqlTypeName.valueOf(normalizedBaseType.getSqlTypeName());
         RelDataType type;
-        if (maxLength != null && scale != null) {
+        if (isWholeNumber(maxLength) && isWholeNumber(scale)) {
             type = typeFactory.createSqlType(sqlTypeName, maxLength, scale);
-        } else if (maxLength != null) {
+        } else if (isWholeNumber(maxLength)) {
             type = typeFactory.createSqlType(sqlTypeName, maxLength);
         } else {
             type = typeFactory.createSqlType(sqlTypeName);
@@ -214,6 +214,10 @@ public class CalciteUtils {
         }
 
         return type;
+    }
+
+    private static boolean isWholeNumber(Integer number) {
+        return number != null && number > 0;
     }
 
     public static JoinType convertJoinType(JoinRelType type) {
