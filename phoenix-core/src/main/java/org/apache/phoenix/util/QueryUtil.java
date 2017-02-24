@@ -378,7 +378,7 @@ public final class QueryUtil {
         final String prefix =
             SELECT + " " + WildcardParseNode.NAME + " "
                 + FROM + " " + SchemaUtil.getTableName(schemaName, tableName);
-        final String suffix = WHERE + " " + where;
+        final String suffix = where != null && !where.isEmpty() ? WHERE + " " + where : "";
         if (columnDefs.isEmpty()) {
             return prefix + suffix;
         }
