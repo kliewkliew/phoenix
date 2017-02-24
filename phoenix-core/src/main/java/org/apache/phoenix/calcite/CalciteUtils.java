@@ -217,7 +217,7 @@ public class CalciteUtils {
     }
 
     private static boolean isWholeNumber(Integer number) {
-        return number != null && number > 0;
+        return number != null && number >= 0;
     }
 
     public static JoinType convertJoinType(JoinRelType type) {

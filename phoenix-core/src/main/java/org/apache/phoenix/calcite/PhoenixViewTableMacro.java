@@ -114,14 +114,16 @@ public class PhoenixViewTable extends ViewTable {
           if (parsed.table instanceof Wrapper) {
             ImmutableList.Builder<Integer> newViewColumnMapping = ImmutableList.builder();
             final PhoenixTable pTable = ((Wrapper) parsed.table).unwrap(PhoenixTable.class);
-            final PColumn tenantIdCol =
-                pTable.tableMapping.getTableRef().getTable().getPKColumns().get(0);
-            for (Integer tableIndex : parsed.columnMapping.subList(0, parsed.columnMapping.size())) {
-              if (tableIndex != tenantIdCol.getPosition()) {// FIXME: only remove if tenant-specific table
-                newViewColumnMapping.add(tableIndex);
+            if (pTable.tableMapping.getTableRef().getTable().isMultiTenant()) {
+              final PColumn tenantIdCol =
+                  pTable.tableMapping.getTableRef().getTable().getPKColumns().get(0);
+              for (Integer tableIndex : parsed.columnMapping.subList(0, parsed.columnMapping.size())) {
+                if (tableIndex != tenantIdCol.getPosition()) {
+                  newViewColumnMapping.add(tableIndex);
+                }
               }
+              viewColumnMapping = newViewColumnMapping.build();
             }
-            viewColumnMapping = newViewColumnMapping.build();
           }
           return new ModifiableViewTable(elementType,
               RelDataTypeImpl.proto(viewTable.getRowType(typeFactory)), viewSql, schemaPath1, viewPath,
