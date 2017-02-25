@@ -96,9 +96,12 @@ public class PhoenixViewTable extends ViewTable {
                   null,
                   tableName,
                   ImmutableList.<ColumnDef>of()), pc);
-          // TODO: don't need resolver. just ensure that view sql at earlier stage uses dynamic columns
-          // then we can use the parsed AnalyzeViewResult all the way through
-          // okay if theop
+          // If we use viewTable, the table is resolved to PhoenixTable on the view.
+          // If we use parsed.table, the table is resolved to ViewTable with viewSql describing the
+          //  relation to the underlying table.
+          // We need to use the view table rather than the underlying table because
+          //  in PhoenixTableModifyRule.convert() we unwrap PhoenixTable so that we can implement
+          //  the rule based on PhoenixTable (ViewTable does not provide enough information).
           final Table viewTable = new PhoenixTable(pc, resolver.getTables().get(0));
           final CalcitePrepare.AnalyzeViewResult parsed =
               Schemas.analyzeView(MaterializedViewTable.MATERIALIZATION_CONNECTION,
@@ -107,30 +110,10 @@ public class PhoenixViewTable extends ViewTable {
               schemaPath != null ? schemaPath : schema.path(null);
           final JavaTypeFactory typeFactory = (JavaTypeFactory) parsed.typeFactory;
           final Type elementType = typeFactory.getJavaClass(parsed.rowType);
-          ImmutableList<Integer> viewColumnMapping =
-              new ImmutableList.Builder<Integer>()
-                  .addAll(parsed.columnMapping)
-                  .build();
-          if (parsed.table instanceof Wrapper) {
-            ImmutableList.Builder<Integer> newViewColumnMapping = ImmutableList.builder();
-            final PhoenixTable pTable = ((Wrapper) parsed.table).unwrap(PhoenixTable.class);
-            if (pTable.tableMapping.getTableRef().getTable().isMultiTenant()) {
-              final PColumn tenantIdCol =
-                  pTable.tableMapping.getTableRef().getTable().getPKColumns().get(0);
-              for (Integer tableIndex : parsed.columnMapping.subList(0, parsed.columnMapping.size())) {
-                if (tableIndex != tenantIdCol.getPosition()) {
-                  newViewColumnMapping.add(tableIndex);
-                }
-              }
-              viewColumnMapping = newViewColumnMapping.build();
-            }
-          }
-          return new ModifiableViewTable(elementType,
-              RelDataTypeImpl.proto(viewTable.getRowType(typeFactory)), viewSql, schemaPath1, viewPath,
-              viewTable,
-              Schemas.path(schema.root(),  parsed.tablePath),
-              parsed.constraint,
-              ImmutableIntList.copyOf(viewColumnMapping), typeFactory);
+          return new ModifiableViewTable(
+              elementType, RelDataTypeImpl.proto(viewTable.getRowType(typeFactory)), viewSql,
+              schemaPath1, viewPath, viewTable, Schemas.path(schema.root(),  parsed.tablePath),
+              parsed.constraint, parsed.columnMapping, typeFactory);
         } catch (SQLException e) {
           // Use the default ViewTableMacro which resolves based on the metadata of the underlying
           // table instead of the stored-metadata of the view.

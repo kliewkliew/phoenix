@@ -64,7 +64,7 @@ import static org.apache.phoenix.query.QueryConstants.DEFAULT_COLUMN_FAMILY;
  * Phoenix.
  */
 public class PhoenixTable extends AbstractTable
-    implements TranslatableTable, CustomColumnResolvingTable, ExtensibleTable, Wrapper {
+    implements TranslatableTable, CustomColumnResolvingTable, ExtensibleTable {
   public final TableMapping tableMapping;
   public final ImmutableBitSet pkBitSet;
   public final RelCollation collation;
@@ -225,9 +225,7 @@ public class PhoenixTable extends AbstractTable
         tableMapping.getTableRef().getTable().getColumns(), extendedColumns.build()));
     try {
     final PTable extendedTable = PTableImpl.makePTable(tableMapping.getPTable(), allColumns);
-    final TableRef extendedTableRef = new TableRef(extendedTable);
-      final TableMapping newMapping =
-          new TableMapping(tableMapping.getTableRef(), extendedTableRef, true);
+      final TableMapping newMapping = new TableMapping(extendedTable);
       return new PhoenixTable(newMapping, pkBitSet, collation, byteCount, rowCount, pc);
     } catch (SQLException e) {
       throw new RuntimeException("Could not create extended table", e);
@@ -236,12 +234,5 @@ public class PhoenixTable extends AbstractTable
 
   @Override public int extendedColumnOffset() {
     return tableMapping.getTableRef().getTable().getColumns().size();
-  }
-
-  @Override public <C> C unwrap(Class<C> aClass) {
-    if (aClass.isInstance(this)) {
-      return aClass.cast(this);
-    }
-    return null;
   }
 }
