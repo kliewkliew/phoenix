@@ -32,6 +32,7 @@ import org.apache.calcite.schema.impl.MaterializedViewTable;
 import org.apache.calcite.schema.impl.ViewTable;
 import org.apache.calcite.schema.impl.ModifiableViewTable;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Util;
 import org.apache.phoenix.compile.ColumnResolver;
 import org.apache.phoenix.compile.FromCompiler;
 import org.apache.phoenix.jdbc.PhoenixConnection;
@@ -56,40 +57,31 @@ public class PhoenixViewTable extends ViewTable {
   private final String viewSql;
   private final SchemaPlus schemaPlus;
   private final Boolean modifiable;
-  /** Typically null. If specified, overrides the path of the schema as the
-   * context for validating {@code viewSql}. */
   private final List<String> schemaPath;
   private final List<String> viewPath;
+  private final String schemaName;
+  private final PhoenixConnection pc;
 
     PhoenixViewTableMacro(SchemaPlus schemaPlus, String viewSql, List<String> schemaPath,
-        List<String> viewPath, Boolean modifiable) {
+        List<String> viewPath, Boolean modifiable, String schemaName, PhoenixConnection pc) {
       this.viewSql = viewSql;
       this.schemaPlus = schemaPlus;
       this.viewPath = viewPath == null ? null : ImmutableList.copyOf(viewPath);
       this.modifiable = modifiable;
-      this.schemaPath =
-          schemaPath == null ? null : ImmutableList.copyOf(schemaPath);
+      this.schemaPath = schemaPath == null ? null : ImmutableList.copyOf(schemaPath);
+      this.schemaName = schemaName;
+      this.pc = pc;
     }
 
     public List<FunctionParameter> getParameters() {
       return Collections.emptyList();
     }
 
-    /**
-     *
-     * @param arguments
-     * 1. schema name
-     * 2. view name
-     * 3. PhoenixConnection
-     * @return a ViewTable or ModifiableViewTable.
-     */
     public TranslatableTable apply(List<Object> arguments) {
       final CalciteSchema schema = CalciteSchema.from(schemaPlus);
       if (modifiable) {
         try {
-          final String schemaName = (String) arguments.get(0);
-          final String viewName = (String) arguments.get(1);
-          final PhoenixConnection pc = (PhoenixConnection) arguments.get(2);
+          final String viewName = Util.last(viewPath);
           final TableName tableName = TableName.create(schemaName, viewName);
           final ColumnResolver resolver = FromCompiler.getResolver(
               NamedTableNode.create(
@@ -120,7 +112,7 @@ public class PhoenixViewTable extends ViewTable {
         }
       }
       final TableMacro viewMacro =
-          ViewTable.viewMacro(schema, viewSql, schemaPath, viewPath, false);
+          ViewTable.viewMacro(schemaPlus, viewSql, schemaPath, viewPath, false);
       return viewMacro.apply(ImmutableList.of());
     }
   }

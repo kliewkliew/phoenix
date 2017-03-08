@@ -232,7 +232,7 @@ public class PhoenixTable extends AbstractTable
     }
   }
 
-  @Override public int extendedColumnOffset() {
+  @Override public int getExtendedColumnOffset() {
     return tableMapping.getTableRef().getTable().getColumns().size();
   }
 }
