@@ -82,13 +82,16 @@ public class PhoenixTable extends AbstractTable
 
 
   private PhoenixTable(TableMapping tableMapping, ImmutableBitSet pkBitSet, RelCollation collation,
-      long byteCount, long rowCount, PhoenixConnection pc) {
+      long byteCount, long rowCount, PhoenixConnection pc, RelDataTypeFactory typeFactory,
+          InitializerExpressionFactory initializerExpressionFactory) {
     this.tableMapping = tableMapping;
     this.pkBitSet = pkBitSet;
     this.collation = collation;
     this.byteCount = byteCount;
     this.rowCount = rowCount;
     this.pc = pc;
+    this.typeFactory = typeFactory;
+    this.initializerExpressionFactory = initializerExpressionFactory;
   }
 
   public PhoenixTable(PhoenixConnection pc, TableRef tableRef, final RelDataTypeFactory typeFactory) throws SQLException {
@@ -274,7 +277,8 @@ public class PhoenixTable extends AbstractTable
         try {
             final PTable extendedTable = PTableImpl.makePTable(tableMapping.getPTable(), allColumns);
             final TableMapping newMapping = new TableMapping(extendedTable);
-            return new PhoenixTable(newMapping, pkBitSet, collation, byteCount, rowCount, pc);
+            return new PhoenixTable(newMapping, pkBitSet, collation, byteCount, rowCount, pc,
+                    typeFactory, initializerExpressionFactory);
         } catch (SQLException e) {
             throw new RuntimeException("Could not create extended table", e);
         }

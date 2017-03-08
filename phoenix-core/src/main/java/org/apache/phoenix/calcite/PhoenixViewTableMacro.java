@@ -62,60 +62,60 @@ public class PhoenixViewTable extends ViewTable {
   private final String schemaName;
   private final PhoenixConnection pc;
 
-    PhoenixViewTableMacro(SchemaPlus schemaPlus, String viewSql, List<String> schemaPath,
-        List<String> viewPath, Boolean modifiable, String schemaName, PhoenixConnection pc) {
-      this.viewSql = viewSql;
-      this.schemaPlus = schemaPlus;
-      this.viewPath = viewPath == null ? null : ImmutableList.copyOf(viewPath);
-      this.modifiable = modifiable;
-      this.schemaPath = schemaPath == null ? null : ImmutableList.copyOf(schemaPath);
-      this.schemaName = schemaName;
-      this.pc = pc;
-    }
-
-    public List<FunctionParameter> getParameters() {
-      return Collections.emptyList();
-    }
-
-    public TranslatableTable apply(List<Object> arguments) {
-      final CalciteSchema schema = CalciteSchema.from(schemaPlus);
-      if (modifiable) {
-        try {
-          final String viewName = Util.last(viewPath);
-          final TableName tableName = TableName.create(schemaName, viewName);
-          final ColumnResolver resolver = FromCompiler.getResolver(
-              NamedTableNode.create(
-                  null,
-                  tableName,
-                  ImmutableList.<ColumnDef>of()), pc);
-          // If we use viewTable, the table is resolved to PhoenixTable on the view.
-          // If we use parsed.table, the table is resolved to ViewTable with viewSql describing the
-          //  relation to the underlying table.
-          // We need to use the view table rather than the underlying table because
-          //  in PhoenixTableModifyRule.convert() we unwrap PhoenixTable so that we can implement
-          //  the rule based on PhoenixTable (ViewTable does not provide enough information).
-          final Table viewTable = new PhoenixTable(pc, resolver.getTables().get(0));
-          final CalcitePrepare.AnalyzeViewResult parsed =
-              Schemas.analyzeView(MaterializedViewTable.MATERIALIZATION_CONNECTION,
-                  schema, schemaPath, viewSql, modifiable);
-          final List<String> schemaPath1 =
-              schemaPath != null ? schemaPath : schema.path(null);
-          final JavaTypeFactory typeFactory = (JavaTypeFactory) parsed.typeFactory;
-          final Type elementType = typeFactory.getJavaClass(parsed.rowType);
-          return new ModifiableViewTable(
-              elementType, RelDataTypeImpl.proto(viewTable.getRowType(typeFactory)), viewSql,
-              schemaPath1, viewPath, viewTable, Schemas.path(schema.root(),  parsed.tablePath),
-              parsed.constraint, parsed.columnMapping, typeFactory);
-        } catch (SQLException e) {
-          // Use the default ViewTableMacro which resolves based on the metadata of the underlying
-          // table instead of the stored-metadata of the view.
-        }
-      }
-      final TableMacro viewMacro =
-          ViewTable.viewMacro(schemaPlus, viewSql, schemaPath, viewPath, false);
-      return viewMacro.apply(ImmutableList.of());
-    }
+  PhoenixViewTableMacro(SchemaPlus schemaPlus, String viewSql, List<String> schemaPath,
+          List<String> viewPath, Boolean modifiable, String schemaName, PhoenixConnection pc) {
+    this.viewSql = viewSql;
+    this.schemaPlus = schemaPlus;
+    this.viewPath = viewPath == null ? null : ImmutableList.copyOf(viewPath);
+    this.modifiable = modifiable;
+    this.schemaPath = schemaPath == null ? null : ImmutableList.copyOf(schemaPath);
+    this.schemaName = schemaName;
+    this.pc = pc;
   }
+
+  public List<FunctionParameter> getParameters() {
+    return Collections.emptyList();
+  }
+
+  public TranslatableTable apply(List<Object> arguments) {
+    final CalciteSchema schema = CalciteSchema.from(schemaPlus);
+    if (modifiable) {
+      try {
+        final String viewName = Util.last(viewPath);
+        final TableName tableName = TableName.create(schemaName, viewName);
+        final ColumnResolver resolver = FromCompiler.getResolver(
+                NamedTableNode.create(
+                        null,
+                        tableName,
+                        ImmutableList.<ColumnDef>of()), pc);
+        // If we use viewTable, the table is resolved to PhoenixTable on the view.
+        // If we use parsed.table, the table is resolved to ViewTable with viewSql describing the
+        //  relation to the underlying table.
+        // We need to use the view table rather than the underlying table because
+        //  in PhoenixTableModifyRule.convert() we unwrap PhoenixTable so that we can implement
+        //  the rule based on PhoenixTable (ViewTable does not provide enough information).
+        final CalcitePrepare.AnalyzeViewResult parsed =
+                Schemas.analyzeView(MaterializedViewTable.MATERIALIZATION_CONNECTION,
+                        schema, schemaPath, viewSql, modifiable);
+        final JavaTypeFactory typeFactory = (JavaTypeFactory) parsed.typeFactory;
+        final Table viewTable = new PhoenixTable(pc, resolver.getTables().get(0), typeFactory);
+        final List<String> schemaPath1 =
+                schemaPath != null ? schemaPath : schema.path(null);
+        final Type elementType = typeFactory.getJavaClass(parsed.rowType);
+        return new ModifiableViewTable(
+                elementType, RelDataTypeImpl.proto(viewTable.getRowType(typeFactory)), viewSql,
+                schemaPath1, viewPath, viewTable, Schemas.path(schema.root(),  parsed.tablePath),
+                parsed.constraint, parsed.columnMapping, typeFactory);
+      } catch (SQLException e) {
+        // Use the default ViewTableMacro which resolves based on the metadata of the underlying
+        // table instead of the stored-metadata of the view.
+      }
+    }
+    final TableMacro viewMacro =
+            ViewTable.viewMacro(schemaPlus, viewSql, schemaPath, viewPath, false);
+    return viewMacro.apply(ImmutableList.of());
+  }
+}
 /*
 }
 */
