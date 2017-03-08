@@ -3,6 +3,7 @@ package org.apache.phoenix.calcite;
 import java.lang.reflect.Type;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -277,10 +278,7 @@ public class PhoenixPrepareImpl extends CalcitePrepareImpl {
                     name = TableName.create(table.tableName.names.get(0), table.tableName.names.get(1));
                 }
                 final ListMultimap<String, Pair<String, Object>> props = convertOptions(table.tableOptions);
-                final List<ColumnDef> columnDefs = Lists.newArrayList();
-                for (SqlNode columnDef : table.columnDefs) {
-                    columnDefs.add(((SqlColumnDefNode) columnDef).columnDef);
-                }
+                final List<ColumnDef> columnDefs = getColumnDefs(table.columnDefs);
                 final PrimaryKeyConstraint pkConstraint;
                 if (table.pkConstraint == null) {
                     pkConstraint = null;
@@ -440,12 +438,7 @@ public class PhoenixPrepareImpl extends CalcitePrepareImpl {
                 }
                 final NamedTableNode namedTable = NamedTableNode.create(name);
                 if(alterTable.newColumnDefs != null || alterTable.tableOptions != null) {
-                    final List<ColumnDef> columnDefs = Lists.newArrayList();
-                    if(alterTable.newColumnDefs != null) {
-                        for (SqlNode columnDef : alterTable.newColumnDefs) {
-                            columnDefs.add(((SqlColumnDefNode) columnDef).columnDef);
-                        }
-                    }
+                    final List<ColumnDef> columnDefs = getColumnDefs(alterTable.newColumnDefs);
                     boolean ifNotExists = false;
                     if(alterTable.ifNotExists != null) {
                         ifNotExists = alterTable.ifNotExists.booleanValue();
@@ -648,6 +641,24 @@ public class PhoenixPrepareImpl extends CalcitePrepareImpl {
         } catch (SQLException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    public List<ColumnDef> getColumnDefs(SqlNodeList sqlColumnDefs)
+            throws SQLException {
+        if(sqlColumnDefs == null) {
+            return Collections.<ColumnDef>emptyList();
+        }
+        List<ColumnDef> columnDefs = new ArrayList<ColumnDef>(sqlColumnDefs.size());
+        for(SqlNode columnDef : sqlColumnDefs) {
+            SqlColumnDefNode columnDefNode = (SqlColumnDefNode) columnDef;
+            if(columnDefNode.defaultValueExp!=null) {
+                 ParseNode defaultValueNode= convertSqlNodeToParseNode(columnDefNode.defaultValueExp);
+                 columnDefs.add(new ColumnDef(columnDefNode.columnDef, defaultValueNode.toString()));
+            } else {
+                columnDefs.add(columnDefNode.columnDef);
+            }
+        }
+        return columnDefs;
     }
 
     private static ParseNode convertSqlNodeToParseNode(SqlNode sqlNode) throws SQLException {

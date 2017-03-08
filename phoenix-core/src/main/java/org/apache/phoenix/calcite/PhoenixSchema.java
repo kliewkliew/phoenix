@@ -87,7 +87,6 @@ public class PhoenixSchema implements Schema {
     protected final SchemaPlus parentSchema;
     protected final MetaDataClient client;
     protected final SequenceManager sequenceManager;
-    
     protected final Map<String, Schema> subSchemas;
     protected final Map<String, Table> tables;
     protected final Map<String, Function> views;
@@ -96,7 +95,7 @@ public class PhoenixSchema implements Schema {
     private final static Function listJarsFunction = TableFunctionImpl
             .create(ListJarsTable.LIST_JARS_TABLE_METHOD);
     private final Multimap<String, Function> builtinFunctions = ArrayListMultimap.create();
-
+    private RelDataTypeFactory typeFactory;
     
     protected PhoenixSchema(String name, String schemaName,
             SchemaPlus parentSchema, PhoenixConnection pc) {
@@ -117,7 +116,12 @@ public class PhoenixSchema implements Schema {
             throw new RuntimeException(e);
         }
         registerBuiltinFunctions();
+    }
 
+    protected PhoenixSchema(String name, String schemaName,
+            SchemaPlus parentSchema, PhoenixConnection pc, RelDataTypeFactory typeFactory) {
+        this(name, schemaName, parentSchema, pc);
+        this.setTypeFactory(typeFactory);
     }
 
     private static Schema create(SchemaPlus parentSchema,
@@ -322,7 +326,7 @@ public class PhoenixSchema implements Schema {
                 table = viewMacro.apply(ImmutableList.of());
             } else {
                 tableRef = fixTableMultiTenancy(tableRef);
-                table = new PhoenixTable(pc, tableRef);
+                table = new PhoenixTable(pc, tableRef, getTypeFactory());
             }
         } catch (TableNotFoundException e) {
         } catch (SQLException e) {
@@ -422,7 +426,7 @@ public class PhoenixSchema implements Schema {
         if (getTable(name) != null || !getFunctions(name).isEmpty()) {
             return null;
         }
-        schema = new PhoenixSchema(name, name, parentSchema.getSubSchema(this.name), pc);
+        schema = new PhoenixSchema(name, name, parentSchema.getSubSchema(this.name), pc, typeFactory);
         subSchemas.put(name, schema);
         return schema;
     }
@@ -495,7 +499,7 @@ public class PhoenixSchema implements Schema {
     private void addMaterialization(TableRef indexTableRef, List<String> path,
             CalciteSchema calciteSchema) throws SQLException {
         indexTableRef = fixTableMultiTenancy(indexTableRef);
-        final PhoenixTable table = new PhoenixTable(pc, indexTableRef);
+        final PhoenixTable table = new PhoenixTable(pc, indexTableRef, getTypeFactory());
         final PTable index = indexTableRef.getTable();
         tables.put(index.getTableName().getString(), table);
         StringBuffer sb = new StringBuffer();
@@ -546,6 +550,14 @@ public class PhoenixSchema implements Schema {
         }
 
         return new PhoenixSequence(schemaName, name, pc);
+    }
+
+    public RelDataTypeFactory getTypeFactory() {
+        return typeFactory;
+    }
+
+    public void setTypeFactory(RelDataTypeFactory typeFactory) {
+        this.typeFactory = typeFactory;
     }
 
     /** Schema factory that creates a
