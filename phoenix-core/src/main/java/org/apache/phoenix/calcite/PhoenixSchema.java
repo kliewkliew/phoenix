@@ -318,11 +318,10 @@ public class PhoenixSchema implements Schema {
                     schemaName == null ? schema : parentSchema;
                 final String viewSql = tableRef.getTable().getViewStatement();
                 final TableMacro viewMacro =
-                    new PhoenixViewTableMacro(schema, viewSql,
+                    ViewTable.viewMacro(schema, viewSql,
                         CalciteSchema.from(viewSqlSchema).path(null),
                         ImmutableList.of(name),
-                        tableRef.getTable().getViewType() == ViewType.UPDATABLE,
-                        schemaName, pc);
+                        tableRef.getTable().getViewType() == ViewType.UPDATABLE);
                 table = viewMacro.apply(ImmutableList.of());
             } else {
                 tableRef = fixTableMultiTenancy(tableRef);
