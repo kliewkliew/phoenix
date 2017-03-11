@@ -127,7 +127,14 @@ public class CreateTableCompiler {
             parentToBe = tableRef.getTable();
             viewTypeToBe = parentToBe.getViewType() == ViewType.MAPPED ? ViewType.MAPPED : ViewType.UPDATABLE;
             if (whereNode == null) {
-                viewStatementToBe = parentToBe.getViewStatement();
+                if (parentToBe.getViewStatement() == null) {
+                    viewStatementToBe = QueryUtil.getViewStatement(
+                        parentToBe.getSchemaName().getString(),
+                        parentToBe.getTableName().getString(),
+                        columnDefs, null);
+                } else {
+                    viewStatementToBe = parentToBe.getViewStatement();
+                }
             } else {
                 whereNode = StatementNormalizer.normalize(whereNode, resolver);
                 if (whereNode.isStateless()) {
@@ -144,7 +151,11 @@ public class CreateTableCompiler {
                     TableName baseTableName = create.getBaseTableName();
                     StringBuilder buf = new StringBuilder();
                     whereNode.toSQL(resolver, buf);
-                    viewStatementToBe = QueryUtil.getViewStatement(baseTableName.getSchemaName(), baseTableName.getTableName(), buf.toString());
+                    viewStatementToBe = QueryUtil.getViewStatement(
+                        baseTableName.getSchemaName(),
+                        baseTableName.getTableName(),
+                        columnDefs,
+                        buf.toString());
                 }
                 if (viewTypeToBe != ViewType.MAPPED) {
                     Long scn = connection.getSCN();

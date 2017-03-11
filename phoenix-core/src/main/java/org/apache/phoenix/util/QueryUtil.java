@@ -40,6 +40,7 @@ import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.iterate.ResultIterator;
 import org.apache.phoenix.jdbc.PhoenixConnection;
 import org.apache.phoenix.jdbc.PhoenixEmbeddedDriver;
+import org.apache.phoenix.parse.ColumnDef;
 import org.apache.phoenix.parse.HintNode;
 import org.apache.phoenix.parse.HintNode.Hint;
 import org.apache.phoenix.parse.WildcardParseNode;
@@ -53,6 +54,7 @@ import org.apache.phoenix.schema.types.PInteger;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -364,13 +366,32 @@ public final class QueryUtil {
         }
         return url;
     }
-    
+
     public static String getViewStatement(String schemaName, String tableName, String where) {
-        // Only form we currently support for VIEWs: SELECT * FROM t WHERE ...
-        return SELECT + " " + WildcardParseNode.NAME + " " + FROM + " " +
-                (schemaName == null || schemaName.length() == 0 ? "" : ("\"" + schemaName + "\".")) +
-                ("\"" + tableName + "\" ") +
-                (WHERE + " " + where);
+        return getViewStatement(schemaName, tableName, ImmutableList.<ColumnDef>of(), where);
+    }
+
+    public static String getViewStatement(
+        String schemaName, String tableName, List<ColumnDef> columnDefs, String where) {
+        final String prefix =
+            SELECT + " " + WildcardParseNode.NAME + " "
+                + FROM + " " + SchemaUtil.getTableName(schemaName, tableName);
+        final String suffix = where != null && !where.isEmpty() ? WHERE + " " + where : "";
+        if (columnDefs.isEmpty()) {
+            return prefix + suffix;
+        }
+
+        final StringBuilder infix = new StringBuilder();
+        infix.append("(");
+        for (ColumnDef columnDef : columnDefs) {
+            infix.append(columnDef.getColumnDefName());
+            infix.append(" ");
+            infix.append(columnDef.getDataType().getSqlTypeName());
+            infix.append(",");
+        }
+        infix.deleteCharAt(infix.length() - 1);
+        infix.append(") ");
+        return prefix + infix + suffix;
     }
 
     public static Integer getOffsetLimit(Integer limit, Integer offset) {
