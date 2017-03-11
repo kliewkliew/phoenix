@@ -145,6 +145,7 @@ import org.apache.phoenix.schema.SortOrder;
 import org.apache.phoenix.schema.TypeMismatchException;
 import org.apache.phoenix.schema.types.PBinary;
 import org.apache.phoenix.schema.types.PBinaryArray;
+import org.apache.phoenix.schema.types.PBoolean;
 import org.apache.phoenix.schema.types.PChar;
 import org.apache.phoenix.schema.types.PCharArray;
 import org.apache.phoenix.schema.types.PDataType;
@@ -228,7 +229,8 @@ public class CalciteUtils {
         RelDataType type;
         if (maxLength != null && scale != null) {
             type = typeFactory.createSqlType(sqlTypeName, maxLength, scale);
-        } else if (maxLength != null) {
+        } else if (maxLength != null
+                && pDataType.getSqlType() != PBoolean.INSTANCE.getSqlType()) {
             type = typeFactory.createSqlType(sqlTypeName, maxLength);
         } else {
             type = typeFactory.createSqlType(sqlTypeName);
