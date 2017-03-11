@@ -17,6 +17,7 @@
  */
 package org.apache.phoenix.schema.types;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.phoenix.schema.SortOrder;
 
@@ -99,7 +100,9 @@ public abstract class PBinaryBase extends PDataType<byte[]> {
     @Override
     public boolean isSizeCompatible(ImmutableBytesWritable ptr, Object value, PDataType srcType,
         SortOrder sortOrder, Integer maxLength, Integer scale, Integer desiredMaxLength, Integer desiredScale) {
-        if (ptr.getLength() != 0 && desiredMaxLength != null) {
+        if (ptr.getLength() != 0
+                && desiredMaxLength != null
+                && desiredMaxLength != RelDataType.PRECISION_NOT_SPECIFIED) {
             if (maxLength == null) { // If not specified, compute
                 if (value != null && srcType instanceof PBinaryBase) { // Use value if provided
                     maxLength = ((byte[])value).length;

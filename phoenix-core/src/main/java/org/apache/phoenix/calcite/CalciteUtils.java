@@ -226,9 +226,9 @@ public class CalciteUtils {
         final PDataType normalizedBaseType = PDataType.fromTypeId(sqlTypeId);
         final SqlTypeName sqlTypeName = SqlTypeName.valueOf(normalizedBaseType.getSqlTypeName());
         RelDataType type;
-        if (maxLength != null && scale != null) {
+        if (isPrecisionSpecified(maxLength) && isScaleSpecified(scale)) {
             type = typeFactory.createSqlType(sqlTypeName, maxLength, scale);
-        } else if (maxLength != null) {
+        } else if (isPrecisionSpecified(maxLength)) {
             type = typeFactory.createSqlType(sqlTypeName, maxLength);
         } else {
             type = typeFactory.createSqlType(sqlTypeName);
@@ -238,6 +238,14 @@ public class CalciteUtils {
         }
 
         return type;
+    }
+
+    private static boolean isPrecisionSpecified(Integer number) {
+        return number != null && number != RelDataType.PRECISION_NOT_SPECIFIED;
+    }
+
+    private static boolean isScaleSpecified(Integer number) {
+        return number != null && number != RelDataType.SCALE_NOT_SPECIFIED;
     }
 
     public static JoinType convertJoinType(JoinRelType type) {

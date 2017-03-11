@@ -20,6 +20,7 @@ package org.apache.phoenix.schema.types;
 import java.sql.Types;
 import java.text.Format;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.phoenix.schema.SortOrder;
@@ -101,7 +102,9 @@ public class PVarchar extends PDataType<String> {
     public boolean isSizeCompatible(ImmutableBytesWritable ptr, Object value, PDataType srcType,
             SortOrder sortOrder, Integer maxLength, Integer scale,
             Integer desiredMaxLength, Integer desiredScale) {
-        if (ptr.getLength() != 0 && desiredMaxLength != null) {
+        if (ptr.getLength() != 0
+                && desiredMaxLength != null
+                && desiredMaxLength != RelDataType.PRECISION_NOT_SPECIFIED) {
             if (maxLength == null) {
                 if (value != null) { // Use value if provided
                     maxLength = value.toString().length();
