@@ -50,10 +50,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/*
-public class PhoenixViewTable extends ViewTable {
-
-  static */class PhoenixViewTableMacro implements TableMacro {
+class PhoenixViewTableMacro implements TableMacro {
   private final String viewSql;
   private final SchemaPlus schemaPlus;
   private final Boolean modifiable;
@@ -116,6 +113,3 @@ public class PhoenixViewTable extends ViewTable {
     return viewMacro.apply(ImmutableList.of());
   }
 }
-/*
-}
-*/
